@@ -12,7 +12,7 @@ How **DispatcherServlet** work (simple)?
     -   Map<URL, Controller>: Find what POJO mapping with URL
     -   Map<URL, Method>: Find what method in POJO mapping with URL
 
-![Front Controller](/image//FrontController.PNG)
+![Front Controller](image/FrontController.PNG)
 
 ---
 
@@ -1605,7 +1605,7 @@ public class WebApplicationConfig implements WebMvcConfigurer {
 }
 ```
 
-![Json View](/image/JsonView.PNG)
+![Json View](image/JsonView.PNG)
 
 It will turn **`all model attributes`** to json if we add `.json` after the URL
 
