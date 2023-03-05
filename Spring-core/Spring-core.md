@@ -302,7 +302,7 @@ Will learn later in Spring MVC
 
 # @Component and Further Stereotype Annotations
 
-![@Component Diagram](/image/%40Component.PNG)
+![@Component Diagram](image/%40Component.PNG)
 
 `@Component` is a stereotype annotation in Spring that is used to indicate that a class is a component that can be managed by the Spring container. The class is automatically registered as a bean with the container and can be used for dependency injection.
 
