@@ -296,7 +296,7 @@ NOTE:
 -   Override destory() method in our servlets? As your need.
 
 Here is a diagram of Servlet Lifecycle
-![Servlet Lifecycle](/image/servlet-lifecycle.png)
+![Servlet Lifecycle](image/servlet-lifecycle.png)
 
 ---
 
@@ -686,7 +686,7 @@ Use pageContext to get Attribute
     5. Cleanup
 
 Here is a diagram of JSP Lifecycle
-![JSP Lifecycle](/image//JSP%20Life%20Cycle.png)
+![JSP Lifecycle](image/JSP%20Life%20Cycle.png)
 
 ---
 
@@ -722,7 +722,7 @@ Here is a diagram of JSP Lifecycle
 
 # JSP Model 1 vs model 2
 
-![JSP Model 1 vs model 2](/image/modal1-modal2.PNG)
+![JSP Model 1 vs model 2](image/modal1-modal2.PNG)
 
 ---
 
