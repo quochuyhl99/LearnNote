@@ -290,3 +290,27 @@ public class LogAspect {
 ```
 
 ## With Schema-base AOP support
+
+Will update if really need to use this way and if have free time
+
+---
+
+# PointCut Expression Language
+
+Pointcut Expression Language is a language used in Aspect-Oriented Programming (AOP) to specify the joinpoints (points of execution) where an advice (functionality) should be applied. It allows developers to specify a set of rules that determine which methods or pieces of code should be intercepted by an aspect.
+
+Spring AOP supports the following AspectJ pointcut designators (PCD) for use in pointcut expressions:
+
+-   `execution`: Matches method execution join points.
+-   `within`: Matches join points within certain types or packages.
+-   `this`: Matches join points where the target object (the object being advised) is an instance of a specified type.
+-   `target`: Matches join points where the target object being advised is an instance of a specified type.
+-   `args`: Matches join points where the arguments passed to a method match a specified pattern.
+-   `@target`: Matches join points where the target object has a specific annotation.
+-   `@args`: Matches join points where the arguments passed to a method have a specific annotation.
+-   `@within`: Matches join points within types that have a specific annotation.
+-   `@annotation`: Matches join points where the method being advised has a specific annotation.
+
+**Execution syntax:**
+
+![spring aop process](image/PointCutExpressionSyntax.PNG)
