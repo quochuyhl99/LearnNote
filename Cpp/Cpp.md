@@ -402,3 +402,457 @@ int main()
 ## 4.10 — Introduction to if statements
 
 ## 4.11 — Chars
+
+### Initializing chars
+
+```cpp
+char ch2{ 'a' }; // initialize with code point for 'a' (stored as integer 97) (preferred)
+char ch1{ 97 }; // initialize with integer 97 ('a') (not preferred)
+```
+
+### Printing chars
+
+-   When using std::cout to print a char, std::cout outputs the char variable as an ASCII character
+
+### Inputting chars
+
+-   Note that std::cin will let you enter multiple characters. However, variable type char can only hold 1 character. Consequently, only the first input character is extracted. The rest of the user input is left in the input buffer that std::cin uses, and can be extracted with subsequent calls to std::cin
+
+### Escape sequences
+
+-   An escape sequence starts with a ‘\’ (backslash) character, and then a following letter or number.
+
+| Name            | Symbol     | Meaning                                                                          |
+| --------------- | ---------- | -------------------------------------------------------------------------------- |
+| Alert           | \a         | Makes an alert, such as a beep                                                   |
+| Backspace       | \b         | Moves the cursor back one space                                                  |
+| Formfeed        | \f         | Moves the cursor to next logical page                                            |
+| Newline         | \n         | Moves cursor to next line                                                        |
+| Carriage return | \r         | Moves cursor to beginning of line                                                |
+| Horizontal tab  | \t         | Prints a horizontal tab                                                          |
+| Vertical tab    | \v         | Prints a vertical tab                                                            |
+| Single quote    | \’         | Prints a single quote                                                            |
+| Double quote    | \”         | Prints a double quote                                                            |
+| Backslash       | \\         | Prints a backslash.                                                              |
+| Question mark   | \?         | Prints a question mark.No longer relevant. You can use question marks unescaped. |
+| Octal number    | \\(number) | Translates into char represented by octal                                        |
+| Hex number      | \x(number) | Translates into char represented by hex number                                   |
+
+### What about the other char types, wchar_t, char16_t, and char32_t?
+
+## 4.12 — Introduction to type conversion and static_cast
+
+### Implicit type conversion
+
+### Type conversion produces a new value
+
+-   a type conversion does not actually change the value or type of the value being converted. Instead, the value to be converted is used as input, and the conversion results in a new value of the target type.
+
+### Implicit type conversion warnings
+
+-   Brace initialization will ensure we don’t try to initialize a variable with an initializer that will lose value when it is implicitly type converted:
+
+```cpp
+int main()
+{
+    double d { 5 }; // okay: int to double is safe
+    int x { 5.5 }; // error: double to int not safe
+
+    return 0;
+}
+```
+
+### An introduction to explicit type conversion via the static_cast operator
+
+-   When we pass in a variable, that variable is evaluated to produce its value, and that value is then converted to the new type. The variable itself is not affected by casting its value to a new type
+
+```cpp
+static_cast<new_type>(expression)
+```
+
+### Converting unsigned numbers to signed numbers
+
+-   The static_cast operator will produce undefined behavior if the value being converted doesn’t fit in range of the new type.
+
+### std::int8_t and std::uint8_t likely behave like chars instead of integers
+
+-   Because `std::int8_t` describes itself as an int, you might be tricked into believing that is int, but on most system, it's char
+-   In cases where std::int8_t is treated as a char, input from the console can also cause problems
+
+## 4.13 — Const variables and symbolic constants
+
+### Const variables
+
+-   A variable whose value can not be changed is called a constant variable.
+
+### The const keyword
+
+-   Place `const` before the type (because it is more conventional to do so).
+
+### Const variables must be initialized
+
+-   Const variables must be initialized when you define them, and then that value can not be changed via assignment
+
+### Naming your const variables
+
+### Const function parameters
+
+-   Don’t use const when passing by value.
+
+### Const return values
+
+-   Don’t use const when returning by value.
+
+### For symbolic constants, prefer constant variables over object-like macros
+
+### Using constant variables throughout a multi-file program
+
+## 4.14 — Compile-time constants, constant expressions, and constexpr
+
+### Constant expressions
+
+-   A constant expression is an expression that can be evaluated by the compiler at compile-time.
+-   Evaluating constant expressions at compile-time makes our compilation take longer (because the compiler has to do more work), but such expressions only need to be evaluated once (rather than every time the program is run). The resulting executables are faster and use less memory.
+
+### Compile-time constants
+
+-   A Compile-time constant is a constant whose value is known at compile-time. Literals (e.g. ‘1’, ‘2.3’, and “Hello, world!”) are one type of compile-time constant.
+
+### Compile-time const and Runtime const
+
+```cpp
+#include <iostream>
+
+int getNumber()
+{
+    std::cout << "Enter a number: ";
+    int y{};
+    std::cin >> y;
+
+    return y;
+}
+
+int main()
+{
+    const int x{ 3 };           // x is a compile time constant
+
+    const int w{ 4 };           // w is a compile time constant
+
+    const int y{ getNumber() }; // y is a runtime constant
+
+    const int z{ x + y };       // x + y is a runtime expression
+    std::cout << z << '\n';     // this is also a runtime expression
+
+    const int t{ x + w };       // x + w is a compile time expression
+
+    return 0;
+}
+```
+
+### The `constexpr` keyword
+
+-   A `constexpr` (which is short for “constant expression”) variable can only be a compile-time constant. If the initialization value of a constexpr variable is not a constant expression, the compiler will error.
+
+-   Any variable that should not be modifiable after initialization and whose initializer is known at compile-time should be declared as constexpr.
+-   Any variable that should not be modifiable after initialization and whose initializer is not known at compile-time should be declared as const.
+
+-   Caveat: In the future we will discuss some types that are not currently compatible with constexpr (including std::string, std::vector, and other types that use dynamic memory allocation). For constant objects of these types, use const instead.
+
+### Const and constexpr function parameters
+
+-   function parameters cannot be declared as `constexpr`
+
+### Constant folding for constant subexpressions
+
+## 4.15 — Literals
+
+-   Literals are values that are inserted directly into the code
+
+### The type of a literal
+
+| Literal value        | Examples        | Default literal type | Note                                      |
+| -------------------- | --------------- | -------------------- | ----------------------------------------- |
+| integer value        | 5, 0, -3        | int                  |
+| boolean value        | true, false     | bool                 |
+| floating point value | 1.2, 0.0, 3.4   | double (not float!)  |
+| character            | ‘a’, ‘\n’       | char                 |
+| C-style string       | “Hello, world!” | const char[14]       | see C-style string literals section below |
+
+### Literal suffixes
+
+-   If the default type of a literal is not as desired, you can change the type of a literal by adding a suffix:
+    | Data type | Suffix | Meaning |
+    | -------------- | -------------------------------------- | ----------------------------------------- |
+    | integral | u or U | unsigned int |
+    | integral | l or L | long |
+    | integral | ul, uL, Ul, UL, lu, lU, Lu, LU | unsigned long |
+    | integral | ll or LL | long long |
+    | integral | ull, uLL, Ull, ULL, llu, llU, LLu, LLU | unsigned long long |
+    | integral | z or Z | The signed version of std::size_t (C++23) |
+    | integral | uz, uZ, Uz, UZ, zu, zU, Zu, ZU | std::size_t (C++23) |
+    | floating point | f or F | float |
+    | floating point | l or L | long double |
+    | string | s | std::string |
+    | string | sv | std::string_view |
+
+-   Prefer literal suffix L (upper case) over l (lower case).
+
+### Integral literals
+
+### Floating point literals
+
+-   By default, floating point literals have a type of `double`. To make them `float` literals instead, the `f` (or `F`) suffix should be used:
+
+### Scientific notation for floating point literals
+
+```cpp
+double pi { 3.14159 }; // 3.14159 is a double literal in standard notation
+double avogadro { 6.02e23 }; // 6.02 x 10^23 is a double literal in scientific notation
+double electronCharge { 1.6e-19 }; // charge on an electron is 1.6 x 10^-19
+```
+
+### C-style string literals
+
+-   All C-style string literals have an implicit null terminator. This trailing `\0` character is a special character called a null terminator, and it is used to indicate the end of the string.
+-   Unlike most other literals (which are values, not objects), C-style string literals are const objects that are created at the start of the program and are guaranteed to exist for the entirety of the program. This fact will become important in a few lessons, when we discuss `std::string_view`.
+
+### Magic numbers
+
+-   Avoid magic numbers in your code (use constexpr variables instead).
+
+## 4.16 — Numeral systems (decimal, binary, hexadecimal, and octal)
+
+### Octal and hexadecimal literals
+
+-   Octal is base 8. To use an octal literal, prefix your literal with a 0 (zero):
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int x{ 012 }; // 0 before the number means this is octal
+    std::cout << x << '\n';
+    return 0;
+}
+```
+
+This program prints: `10`
+
+-   Hexadecimal is base 16. To use a hexadecimal literal, prefix your literal with 0x:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int x{ 0xF }; // 0x before the number means this is hexadecimal
+    std::cout << x << '\n';
+    return 0;
+}
+```
+
+This program prints: `15`
+
+### Binary literals
+
+-   Can use `0x` or `0b`. See the web page for example
+
+### Digit separators
+
+-   Because long literals can be hard to read, C++14 also adds the ability to use a quotation mark (‘) as a digit separator.
+-   Also note that the separator can not occur before the first digit of the value.
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int bin { 0b1011'0010 };  // assign binary 1011 0010 to the variable
+    long value { 2'132'673'462 }; // much easier to read than 2132673462
+    int bin { 0b'1011'0010 };  // error: ' used before first digit of value
+    return 0;
+}
+```
+
+### Outputting values in decimal, octal, or hexadecimal
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int x { 12 };
+    std::cout << x << '\n'; // decimal (by default)
+    std::cout << std::hex << x << '\n'; // hexadecimal
+    std::cout << x << '\n'; // now hexadecimal
+    std::cout << std::oct << x << '\n'; // octal
+    std::cout << std::dec << x << '\n'; // return to decimal
+    std::cout << x << '\n'; // decimal
+
+    return 0;
+}
+```
+
+### Outputting values in binary
+
+-   See the web page for example
+
+## 4.17 — Introduction to std::string
+
+### Introducing std::string
+
+-   the `std::string` type, which lives in the \<string\> header.
+
+### `std::string` can handle strings of different lengths
+
+### String input with `std::cin`
+
+-   Using `std::string` with `std::cin` may yield some surprises (unexpected behavior)! See the web page for example and explanation
+
+### Use `std::getline()` to input text
+
+```cpp
+#include <iostream>
+#include <string> // For std::string and std::getline
+
+int main()
+{
+    std::cout << "Enter your full name: ";
+    std::string name{};
+    std::getline(std::cin >> std::ws, name); // read a full line of text into name
+
+    std::cout << "Enter your favorite color: ";
+    std::string color{};
+    std::getline(std::cin >> std::ws, color); // read a full line of text into color
+
+    std::cout << "Your name is " << name << " and your favorite color is " << color << '\n';
+
+    return 0;
+}
+```
+
+### What the heck is std::ws?
+
+-   See the web page for example and explanation
+-   If using s`td::getline()` to read strings, use `std::cin >> std::ws` input manipulator to ignore leading whitespace.
+
+-   Using the extraction operator (>>) with std::cin ignores leading whitespace.
+    std::getline() does not ignore leading whitespace unless you use input manipulator std::ws
+
+### The length of a `std::string`
+
+-   use `std::string::length()` to get length of string
+-   `std::string` doesn't contain implicit null-terminator character
+-   `std::string::length()` returns an unsigned integral value (most likely of type `size_t`). If you want to assign the length to an int variable, you should `static_cast` it to avoid compiler warnings about signed/unsigned conversions:
+    ```cpp
+    int length { static_cast<int>(name.length()) };
+    ```
+
+### `std::string` can be expensive to initialize and copy
+
+-   Do not pass `std::string` by value, as making copies of `std::string` is expensive. Prefer `std::string_view` parameters.
+
+### Literals for `std::string`
+
+-   Double-quoted string literals (like “Hello, world!”) are C-style strings by default (and thus, have a strange type).
+
+-   We can create string literals with type std::string by using a s suffix after the double-quoted string literal.
+
+```cpp
+#include <iostream>
+#include <string> // for std::string
+
+int main()
+{
+    using namespace std::string_literals; // easy access to the s suffix
+
+    std::cout << "foo\n";   // no suffix is a C-style string literal
+    std::cout << "goo\n"s;  // s suffix is a std::string literal
+
+    return 0;
+}
+```
+
+### Constexpr strings
+
+-   If you try to define a constexpr std::string, your compiler will probably generate an error
+
+## 4.18 — Introduction to std::string_view
+
+-   `std::string_view` lives in the \<string_view\> header), provides **read-only** access to an existing string (a C-style string, a std::string, or another std::string_view) without making a copy. **Read-only** means that we can access and use the value being viewed, but we can not modify it.
+
+    ```cpp
+    #include <iostream>
+    #include <string_view>
+
+    // str provides read-only access to whatever argument is passed in
+    void printSV(std::string_view str) // now a std::string_view
+    {
+        std::cout << str << '\n';
+    }
+
+    int main()
+    {
+        std::string_view s{ "Hello, world!" }; // now a std::string_view
+        printSV(s);
+
+        return 0;
+    }
+    ```
+
+-   Prefer `std::string_view` over `std::string` when you need a read-only string, especially for function parameters.
+
+### `std::string_view` can be initialized with many different types of strings
+
+### `std::string_view` parameters will accept many different types of string arguments
+
+### `std::string_view` will not implicitly convert to `std::string`
+
+However, if this is desired, we have two options:
+
+1. Explicitly create a std::string with a std::string_view initializer (which is allowed, since this will rarely be done unintentionally)
+2. Convert an existing std::string_view to a std::string using static_cast
+
+### Assignment changes what the `std::string_view` is viewing
+
+-   Assigning a new string to a `std::string_view` causes the `std::string_view` to view the new string. It does not modify the prior string being viewed in any way.
+
+### Literals for `std::string_view`
+
+```cpp
+#include <iostream>
+#include <string>      // for std::string
+#include <string_view> // for std::string_view
+
+int main()
+{
+    using namespace std::string_literals;      // access the s suffix
+    using namespace std::string_view_literals; // access the sv suffix
+
+    std::cout << "foo\n";   // no suffix is a C-style string literal
+    std::cout << "goo\n"s;  // s suffix is a std::string literal
+    std::cout << "moo\n"sv; // sv suffix is a std::string_view literal
+
+    return 0;
+};
+```
+
+### constexpr std::string_view
+
+Unlike std::string, std::string_view has full support for constexpr:
+
+```cpp
+#include <iostream>
+#include <string_view>
+
+int main()
+{
+    constexpr std::string_view s{ "Hello, world!" }; // s is a string symbolic constant
+    std::cout << s << '\n'; // s will be replaced with "Hello, world!" at compile-time
+
+    return 0;
+}
+```
+
+## 4.19 — std::string_view (part 2)
