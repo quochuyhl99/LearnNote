@@ -856,3 +856,258 @@ int main()
 ```
 
 ## 4.19 — std::string_view (part 2)
+
+### A quick guide on when to use `std::string` vs `std::string_view`
+
+This guide is not meant to be comprehensive, but is intended to highlight the most common cases:
+
+Use a std::string variable when:
+
+-   You need a string that you can modify.
+-   You need to store user-inputted text.
+-   You need to store the return value of a function that returns a std::string.
+
+Use a std::string_view variable when:
+
+-   You need read-only access to part or all of a string that already exists elsewhere and will not be modified or destroyed before use of the std::string_view is complete.
+-   You need a symbolic constant for a C-style string.
+-   You need to continue viewing the return value of a function that returns a C-style string or a non-dangling std::string_view.
+
+Use a std::string function parameter when:
+
+-   The function needs to modify the string passed in as an argument without affecting the caller. This is rare.
+-   You are using a language standard older than C++17.
+-   You meet the criteria of the cases covered in lesson 9.5 -- Pass by lvalue reference.
+
+Use a std::string_view function parameter when:
+
+-   The function needs a read-only string.
+
+Use a std::string return type when:
+
+-   The function returns a std::string local variable.
+
+Use a std::string_view return type when:
+
+-   The function returns a C-style string literal.
+-   The function returns a std::string_view parameter.
+
+Things to remember about std::string:
+
+-   Initializing and copying std::string is expensive, so avoid this as much as possible.
+-   Avoid passing std::string by value, as this makes a copy.
+-   If possible, avoid creating short-lived std::string objects.
+
+Things to remember about std::string_view:
+
+-   Because C-style string literals exist for the entire program, it is always okay to set a std::string_view to a C-style string literal.
+-   When a string is destroyed, all views to that string are invalidated.
+-   Modifying a std::string will invalidate any views to that string.
+-   Using an invalidated view (other than using assignment to revalidate the view) will cause undefined behavior.
+
+# Chapter 5: Operators
+
+## 5.1 — Operator precedence and associativity
+
+### Compound expressions
+
+-   An expression that has multiple operators is called a compound expression.
+
+### Operator precedence
+
+-   All operators are assigned a level of precedence. Operators with a higher precedence level are grouped with operands first.
+
+### Operator associativity
+
+-   The operator’s associativity tells the compiler whether to evaluate the operators from left to right or from right to left
+
+### Table of operator precedence and associativity
+
+-   See the webpage for detail
+
+### Parenthesization
+
+### Use parenthesis to make compound expressions easier to understand
+
+### Value computation (of operations)
+
+### Order of evaluation (of operands)
+
+## 5.2 — Arithmetic operators
+
+### Unary arithmetic operators
+
+| Operator    | Symbol | Form | Operation     |
+| ----------- | ------ | ---- | ------------- |
+| Unary plus  | \+     | \+x  | Value of x    |
+| Unary minus | \-     | \-x  | Negation of x |
+
+### Binary arithmetic operators
+
+| Operator       | Symbol | Form   | Operation                       |
+| -------------- | ------ | ------ | ------------------------------- |
+| Addition       | \+     | x \+ y | x plus y                        |
+| Subtraction    | \-     | x \- y | x minus y                       |
+| Multiplication | \*     | x \* y | x multiplied by y               |
+| Division       | /      | x / y  | x divided by y                  |
+| Remainder      | %      | x % y  | The remainder of x divided by y |
+
+### Integer and floating point division
+
+-   `Floating point division` returns a floating point value, and the fraction is kept
+-   `Integer division` drops any fractions and returns an integer value
+
+### Using static_cast<> to do floating point division with integers
+
+### Arithmetic assignment operators
+
+| Operator                  | Symbol | Form    | Operation                       |
+| ------------------------- | ------ | ------- | ------------------------------- |
+| Assignment                | =      | x = y   | Assign value y to x             |
+| Addition assignment       | \+=    | x \+= y | Add y to x                      |
+| Subtraction assignment    | \-=    | x \-= y | Subtract y from x               |
+| Multiplication assignment | \*=    | x \*= y | Multiply x by y                 |
+| Division assignment       | /=     | x /= y  | Divide x by y                   |
+| Remainder assignment      | %=     | x %= y  | Put the remainder of x / y in x |
+
+## 5.3 — Remainder and Exponentiation
+
+### The remainder operator (`operator%`)
+
+### Remainder with negative numbers
+
+### Where’s the exponent operator?
+
+## 5.4 — Increment/decrement operators, and side effects
+
+### Incrementing and decrementing variables
+
+| Operator                           | Symbol | Form | Operation                                      |
+| ---------------------------------- | ------ | ---- | ---------------------------------------------- |
+| Prefix increment (pre-increment)   | ++     | ++x  | Increment x, then return x                     |
+| Prefix decrement (pre-decrement)   | ––     | ––x  | Decrement x, then return x                     |
+| Postfix increment (post-increment) | ++     | x++  | Copy x, then increment x, then return the copy |
+| Postfix decrement (post-decrement) | ––     | x––  | Copy x, then decrement x, then return the copy |
+
+### Side effects
+
+-   A function or expression is said to have a side effect if it has some observable effect beyond producing a return value.
+
+### Side effects can cause order of evaluation issues
+
+### The sequencing of side effects
+
+-   C++ does not define the order of evaluation for function arguments or the operands of operators.
+-   Don’t use a variable that has a side effect applied to it more than once in a given statement. If you do, the result may be undefined.
+
+## 5.5 — Comma and conditional operators
+
+### The comma operator
+
+| Operator | Symbol | Form | Operation                             |
+| -------- | ------ | ---- | ------------------------------------- |
+| Comma    | ,      | x, y | Evaluate x then y, returns value of y |
+
+-   The comma **operator (,)** allows you to evaluate multiple expressions wherever a single expression is allowed. The comma operator evaluates the left operand, then the right operand, and then returns the result of the right operand.
+
+-   Avoid using the comma operator, except within for loops.
+
+### Comma as a separator
+
+```cpp
+void foo(int x, int y) // Comma used to separate parameters in function definition
+{
+    add(x, y); // Comma used to separate arguments in function call
+    constexpr int z{ 3 }, w{ 5 }; // Comma used to separate multiple variables being defined on the same line (don't do this)
+}
+```
+
+### The conditional operator
+
+| Operator    | Symbol | Form      | Operation                                                    |
+| ----------- | ------ | --------- | ------------------------------------------------------------ |
+| Conditional | ?:     | c ? x : y | If c is nonzero (true) then evaluate x, otherwise evaluate y |
+
+### Parenthesization of the conditional operator
+
+-   Always parenthesize the conditional part of the conditional operator, and consider parenthesizing the whole thing as well.
+
+### The conditional operator evaluates as an expression
+
+### The type of the expressions must match or be convertible
+
+### So when should you use the conditional operator?
+
+-   It’s most useful when we need a conditional initializer (or assignment) for a variable, or to pass a conditional value to a function.
+
+-   It should not be used for complex if/else statements, as it quickly becomes both unreadable and error prone.
+
+## 5.6 — Relational operators and floating point comparisons
+
+| Operator               | Symbol | Form      | Operation                                                |
+| ---------------------- | ------ | --------- | -------------------------------------------------------- |
+| Greater than           | &gt;   | x &gt; y  | true if x is greater than y, false otherwise             |
+| Less than              | &lt;   | x &lt; y  | true if x is less than y, false otherwise                |
+| Greater than or equals | &gt;=  | x &gt;= y | true if x is greater than or equal to y, false otherwise |
+| Less than or equals    | &lt;=  | x &lt;= y | true if x is less than or equal to y, false otherwise    |
+| Equality               | ==     | x == y    | true if x equals y, false otherwise                      |
+| Inequality             | !=     | x != y    | true if x does not equal y, false otherwise              |
+
+### Comparison of calculated floating point values can be problematic
+
+-   Comparing floating point values using any of the relational operators can be dangerous. This is because floating point values are not precise, and small rounding errors in the floating point operands may cause them to be slightly smaller or slightly larger than expected. And this can throw off the relational operators.
+-   We discussed rounding errors in lesson 4.8 -- Floating point numbers.
+
+### Floating point less-than and greater-than
+
+-   If the consequence of getting a wrong answer when the operands are similar is acceptable, then using these operators can be acceptable. This is an application-specific decision.
+
+### Floating point equality and inequality
+
+-   Avoid using operator== and operator!= to compare floating point values if there is any chance those values have been calculated.
+
+-   It is okay to compare a low-precision (few significant digits) floating point literal to the same literal value of the same type.
+
+### Comparing floating point numbers (advanced / optional reading)
+
+## 5.7 — Logical operators
+
+| Operator    | Symbol     | Example Usage  | Operation                                       |
+| ----------- | ---------- | -------------- | ----------------------------------------------- |
+| Logical NOT | \!         | \!x            | true if x is false, or false if x is true       |
+| Logical AND | &amp;&amp; | x &amp;&amp; y | true if both x and y are true, false otherwise  |
+| Logical OR  | \|\|       | x \|\| y       | true if either x or y are true, false otherwise |
+
+### Short circuit evaluation
+
+-   In order for logical AND to return true, both operands must evaluate to true. If the left operand evaluates to false, logical AND knows it must return false regardless of whether the right operand evaluates to true or false. In this case, the logical AND operator will go ahead and return false immediately without even evaluating the right operand! This is known as short circuit evaluation, and it is done primarily for optimization purposes.
+
+-   Similarly, if the left operand for logical OR is true, then the entire OR condition has to evaluate to true, and the right operand won’t be evaluated.
+
+-   Avoid using expressions with side effects in conjunction with these operators.:
+
+    ```cpp
+    if (x == 1 && ++y == 2)
+        // do something
+    ```
+
+### De Morgan’s laws
+
+-   when you distribute the logical NOT, you also need to flip logical AND to logical OR, and vice-versa!
+    `!(x && y)` is equivalent to `!x || !y`
+    `!(x || y)` is equivalent to `!x && !y`
+
+### Where’s the logical exclusive or (XOR) operator?
+
+-   Logical XOR is a logical operator provided in some languages that is used to test whether an odd number of conditions is true.
+
+| Left operand | Right operand | Result |
+| ------------ | ------------- | ------ |
+| false        | false         | false  |
+| false        | true          | true   |
+| true         | false         | true   |
+| true         | true          | false  |
+
+-   C++ doesn’t provide a logical XOR operator (operator^ is a bitwise XOR, not a logical XOR).
+
+### Alternative operator representations
