@@ -2265,3 +2265,980 @@ int main()
 ```
 
 ### Mixing inline and unnamed namespaces
+
+# Chapter 7: Control Flow and Error Handling
+
+## 7.1 — Control flow introduction
+
+| Category               | Meaning                                                                                                             | Implementated in C++ by          |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| Conditional statements | Conditional statements cause a sequence of code to execute only if some condition is met.                           | If, switch                       |
+| Jumps                  | Jumps tell the CPU to start executing the statements at some other location.                                        | Goto, break, continue            |
+| Function calls         | Function calls are jumps to some other location and back.                                                           | Function calls, return           |
+| Loops                  | Loops tell the program to repeatedly execute some sequence of code zero or more times, until some condition is met. | While, do-while, for, ranged-for |
+| Halts                  | Halts tell the program to quit running.                                                                             | std::exit(), std::abort()        |
+| Exceptions             | Exceptions are a special kind of flow control structure designed for error handling.                                | Try, throw, catch                |
+
+## 7.2 — If statements and blocks
+
+## 7.3 — Common if statement problems
+
+## 7.4 — Constexpr if statements
+
+### Constexpr if statements (C++17)
+
+C++17 introduces the constexpr if statement, which requires the conditional to be a constant expression. The conditional of a constexpr-if-statement will be evaluated at compile-time.
+
+If the constexpr conditional evaluates to `true`, the entire if-else will be replaced by the true-statement. If the constexpr conditional evaluates to `false`, the entire if-else will be replaced by the false-statement (if it exists) or nothing (if there is no else).
+
+```cpp
+#include <iostream>
+
+int main()
+{
+	constexpr double gravity{ 9.8 };
+
+	if constexpr (gravity == 9.8) // now using constexpr if
+		std::cout << "Gravity is normal.\n";
+	else
+		std::cout << "We are not on Earth.\n";
+
+	return 0;
+}
+```
+
+When the above code is compiled, it will compile this:
+
+```cpp
+int main()
+{
+	std::cout << "Gravity is normal.\n";
+
+	return 0;
+}
+```
+
+## 7.5 — Switch statement basics
+
+### Starting a switch
+
+The one restriction is that the condition must evaluate to an integral type (see lesson 4.1 -- Introduction to fundamental data types) or an enumerated type (covered in future lesson 10.2 -- Unscoped enumerations), or be convertible to one.
+
+Expressions that evaluate to floating point types, strings, and most other non-integral types may not be used here.
+
+## 7.6 — Switch fallthrough and scoping
+
+### Fallthrough
+
+Execution will then continue sequentially until one of the following termination conditions happens:
+
+-   The end of the switch block is reached.
+-   Another control flow statement (typically a break or return) causes the switch block or function to exit.
+-   Something else interrupts the normal flow of the program (e.g. the OS shuts the program down, the universe implodes, etc…)
+
+Example:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    switch (2)
+    {
+    case 1: // Does not match
+        std::cout << 1 << '\n'; // Skipped
+    case 2: // Match!
+        std::cout << 2 << '\n'; // Execution begins here
+    case 3:
+        std::cout << 3 << '\n'; // This is also executed
+    case 4:
+        std::cout << 4 << '\n'; // This is also executed
+    default:
+        std::cout << 5 << '\n'; // This is also executed
+    }
+
+    return 0;
+}
+```
+
+### The \[\[fallthrough]] attribute
+
+**Attributes** are a modern C++ feature that allows the programmer to provide the compiler with some additional data about the code. To specify an attribute, the attribute name is placed between double brackets. Attributes are not statements -- rather, they can be used almost anywhere where they are contextually relevant.
+
+The \[\[fallthrough]] attribute modifies a null statement to indicate that fallthrough is intentional (and no warnings should be triggered):
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    switch (2)
+    {
+    case 1:
+        std::cout << 1 << '\n';
+        break;
+    case 2:
+        std::cout << 2 << '\n'; // Execution begins here
+        [[fallthrough]]; // intentional fallthrough -- note the semicolon to indicate the null statement
+    case 3:
+        std::cout << 3 << '\n'; // This is also executed
+        break;
+    }
+
+    return 0;
+}
+```
+
+### Sequential case labels
+
+```cpp
+bool isVowel(char c)
+{
+    return (c=='a' || c=='e' || c=='i' || c=='o' || c=='u' ||
+        c=='A' || c=='E' || c=='I' || c=='O' || c=='U');
+}
+```
+
+Equivalent to
+
+```cpp
+bool isVowel(char c)
+{
+    switch (c)
+    {
+        case 'a': // if c is 'a'
+        case 'e': // or if c is 'e'
+        case 'i': // or if c is 'i'
+        case 'o': // or if c is 'o'
+        case 'u': // or if c is 'u'
+        case 'A': // or if c is 'A'
+        case 'E': // or if c is 'E'
+        case 'I': // or if c is 'I'
+        case 'O': // or if c is 'O'
+        case 'U': // or if c is 'U'
+            return true;
+        default:
+            return false;
+    }
+}
+```
+
+### Switch case scoping
+
+```cpp
+switch (1)
+{
+    case 1: // does not create an implicit block
+        foo(); // this is part of the switch scope, not an implicit block to case 1
+        break; // this is part of the switch scope, not an implicit block to case 1
+    default:
+        std::cout << "default case\n";
+        break;
+}
+```
+
+### Variable declaration and initialization inside case statements
+
+```cpp
+switch (1)
+{
+    int a; // okay: definition is allowed before the case labels
+    int b{ 5 }; // illegal: initialization is not allowed before the case labels
+
+    case 1:
+        int y; // okay but bad practice: definition is allowed within a case
+        y = 4; // okay: assignment is allowed
+        break;
+
+    case 2:
+        int z{ 4 }; // illegal: initialization is not allowed if subsequent cases exist
+        y = 5; // okay: y was declared above, so we can use it here too
+        break;
+
+    case 3:
+        break;
+}
+```
+
+If defining variables used in a case statement, do so in a block inside the case.
+
+```cpp
+switch (1)
+{
+    case 1:
+    { // note addition of explicit block here
+        int x{ 4 }; // okay, variables can be initialized inside a block inside a case
+        std::cout << x;
+        break;
+    }
+    default:
+        std::cout << "default case\n";
+        break;
+}
+```
+
+## 7.7 — Goto statements
+
+An unconditional jump causes execution to jump to another spot in the code. The term “unconditional” means the jump always happens (unlike an `if statement` or `switch statement`, where the jump only happens conditionally based on the result of an expression).
+
+```cpp
+#include <iostream>
+#include <cmath> // for sqrt() function
+
+int main()
+{
+    double x{};
+tryAgain: // this is a statement label
+    std::cout << "Enter a non-negative number: ";
+    std::cin >> x;
+
+    if (x < 0.0)
+        goto tryAgain; // this is the goto statement
+
+    std::cout << "The square root of " << x << " is " << std::sqrt(x) << '\n';
+    return 0;
+}
+```
+
+### Statement labels have function scope
+
+In the chapter on object scope (chapter 6), we covered two kinds of scope: local (block) scope, and file (global) scope. Statement labels utilize a third kind of scope: **function scope**, which means the label is visible throughout the function even before its point of declaration. The `goto statement` and its corresponding `statement label` must appear in the same function.
+
+While the above example shows a `goto statement` that jumps backwards (to a preceding point in the function), `goto statements` can also jump forward:
+
+```cpp
+#include <iostream>
+
+void printCats(bool skip)
+{
+    if (skip)
+        goto end; // jump forward; statement label 'end' is visible here due to it having function scope
+
+    std::cout << "cats\n";
+end:
+    ; // statement labels must be associated with a statement
+}
+
+int main()
+{
+    printCats(true);  // jumps over the print statement and doesn't print anything
+    printCats(false); // prints "cats"
+
+    return 0;
+}
+```
+
+note that `statement labels` must be associated with a statement (hence their name: they label a statement). Because the end of the function had no statement, we had to use a `null statement` so we had a statement to label.
+
+There are two primary limitations to jumping: You can jump only within the bounds of a single function (you can’t jump out of one function and into another), and if you jump forward, you can’t jump forward over the initialization of any variable that is still in scope at the location being jumped to. For example:
+
+```cpp
+int main()
+{
+    goto skip;   // error: this jump is illegal because...
+    int x { 5 }; // this initialized variable is still in scope at statement label 'skip'
+skip:
+    x += 3;      // what would this even evaluate to if x wasn't initialized?
+    return 0;
+}
+```
+
+### Avoid using goto
+
+## 7.8 — Introduction to loops and while statements
+
+### Introduction to loops
+
+### While statements
+
+```
+while (condition)
+    statement;
+```
+
+### While-statements that evaluate to false initially
+
+### Infinite loops
+
+### Intentional infinite loops
+
+Favor `while(true)` for intentional infinite loops.
+
+```cpp
+while (true)
+{
+  // this loop will execute forever
+}
+```
+
+### Loop variables and naming
+
+### Integral loop variables should be signed
+
+Integral loop variables should generally be a signed integral type.
+
+### Doing something every N iterations
+
+### Nested loops
+
+## 7.9 — Do while statements
+
+```
+do
+    statement; // can be a single statement or a compound statement
+while (condition);
+```
+
+## 7.10 — For statements
+
+```
+for (init-statement; condition; end-expression)
+   statement;
+```
+
+The easiest way to initially understand how a `for statement` works is to convert it into an equivalent `while statement`:
+
+```
+{ // note the block here
+    init-statement; // used to define variables used in the loop
+    while (condition)
+    {
+        statement;
+        end-expression; // used to modify the loop variable prior to reassessment of the condition
+    }
+} // variables defined inside the loop go out of scope here
+```
+
+### Omitted expressions
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int count{ 0 };
+    for ( ; count < 10; ) // no init-statement or end-expression
+    {
+        std::cout << count << ' ';
+        ++count;
+    }
+
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+infinite loop:
+
+```cpp
+for (;;)
+    statement;
+```
+
+### For loops with multiple counters
+
+Defining multiple variables (in the init-statement) and using the comma operator (in the end-expression) is acceptable inside a `for statement`.
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    for (int x{ 0 }, y{ 9 }; x < 10; ++x, --y)
+        std::cout << x << ' ' << y << '\n';
+
+    return 0;
+}
+```
+
+## 7.11 — Break and continue
+
+## 7.12 — Halts (exiting your program early)
+
+### The std::exit() function
+
+The `std::exit()` function causes your program to terminate normally
+
+The `std::exit()` function does not clean up local variables in the current function or up the call stack. Because of this, it’s generally better to avoid calling s`td::exit()`.
+
+### std::atexit
+
+`std::atexit()` function allows you to specify a function that will automatically be called on program termination
+
+We discuss passing functions as arguments in lesson 12.1 -- Function Pointers.
+
+### std::abort and std::terminate
+
+The `std::abort()` function causes your program to terminate abnormally
+
+We will see cases later in this chapter (7.18 -- Assert and static_assert) where `std::abort` is called implicitly.
+
+The `std::terminate()` function is typically used in conjunction with `exceptions` (we’ll cover exceptions in a later chapter). Although `std::terminate` can be called explicitly, it is more often called implicitly when an exception isn’t handled (and in a few other exception-related cases). By default, `std::terminate()` calls `std::abort()`.
+
+### When should you use a halt?
+
+The short answer is “almost never”. Destroying local objects is an important part of C++ (particularly when we get into classes), and none of the above-mentioned functions clean up local variables. Exceptions are a better and safer mechanism for handling error cases.
+
+## 7.13 — Introduction to testing your code
+
+## 7.14 — Code coverage
+
+## 7.15 — Common semantic errors in C++
+
+## 7.16 — Detecting and handling errors
+
+There are 4 general strategies that can be used:
+
+-   Handle the error within the function
+-   Pass the error back to the caller to deal with
+-   Halt the program
+-   Throw an exception
+
+### Fatal errors
+
+If the error is so bad that the program can not continue to operate properly, this is called a **non-recoverable** error (also called a **fatal error**). In such cases, the best thing to do is terminate the program.
+
+### Exceptions
+
+### When to use `std::cout` vs `std::cerr` vs logging
+
+## 7.17 — std::cin and handling invalid input
+
+### std::cin, buffers, and extraction
+
+In order to discuss how std::cin and operator>> can fail, it first helps to know a little bit about how they work.
+
+When we use operator>> to get user input and put it into a variable, this is called an “extraction”. The >> operator is accordingly called the extraction operator when used in this context.
+
+When the user enters input in response to an extraction operation, that data is placed in a buffer inside of std::cin. A buffer (also called a data buffer) is simply a piece of memory set aside for storing data temporarily while it’s moved from one place to another. In this case, the buffer is used to hold user input while it’s waiting to be extracted to variables.
+
+When the extraction operator is used, the following procedure happens:
+
+-   If there is data already in the input buffer, that data is used for extraction.
+-   If the input buffer contains no data, the user is asked to input data for extraction (this is the case most of the time). When the user hits enter, a ‘\n’ character will be placed in the input buffer.
+-   operator>> extracts as much data from the input buffer as it can into the variable (ignoring any leading whitespace characters, such as spaces, tabs, or ‘\n’).
+-   Any data that can not be extracted is left in the input buffer for the next extraction.
+
+Extraction succeeds if at least one character is extracted from the input buffer. Any unextracted input is left in the input buffer for future extractions.
+
+Extraction fails if the input data does not match the type of the variable being extracted to.
+
+### A sample program
+
+```cpp
+#include <iostream>
+
+double getDouble()
+{
+    std::cout << "Enter a decimal number: ";
+    double x{};
+    std::cin >> x;
+    return x;
+}
+
+char getOperator()
+{
+    std::cout << "Enter one of the following: +, -, *, or /: ";
+    char op{};
+    std::cin >> op;
+    return op;
+}
+
+void printResult(double x, char operation, double y)
+{
+    switch (operation)
+    {
+    case '+':
+        std::cout << x << " + " << y << " is " << x + y << '\n';
+        break;
+    case '-':
+        std::cout << x << " - " << y << " is " << x - y << '\n';
+        break;
+    case '*':
+        std::cout << x << " * " << y << " is " << x * y << '\n';
+        break;
+    case '/':
+        std::cout << x << " / " << y << " is " << x / y << '\n';
+        break;
+    }
+}
+
+int main()
+{
+    double x{ getDouble() };
+    char operation{ getOperator() };
+    double y{ getDouble() };
+
+    printResult(x, operation, y);
+
+    return 0;
+}
+```
+
+### Types of invalid text input
+
+We can generally separate input text errors into four types:
+
+-   Input extraction succeeds but the input is meaningless to the program (e.g. entering ‘k’ as your mathematical operator).
+-   Input extraction succeeds but the user enters additional input (e.g. entering ‘\*q hello’ as your mathematical operator).
+-   Input extraction fails (e.g. trying to enter ‘q’ into a numeric input).
+-   Input extraction succeeds but the user overflows a numeric value.
+
+### Error case 1: Extraction succeeds but input is meaningless
+
+The solution here is simple: do input validation. This usually consists of 3 steps:
+
+1. Check whether the user’s input was what you were expecting.
+2. If so, return the value to the caller.
+3. If not, tell the user something went wrong and have them try again.
+
+### Error case 2: Extraction succeeds but with extraneous input
+
+Any extraneous characters entered were simply ignored:
+
+```cpp
+std::cin.ignore(100, '\n');  // clear up to 100 characters out of the buffer, or until a '\n' character is removed
+```
+
+This call would remove up to 100 characters, but if the user entered more than 100 characters we’ll get messy output again.
+
+```cpp
+std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+```
+
+`std::numeric_limits<std::streamsize>::max()` returns the largest value that can be stored in a variable of type `std::streamsize`
+
+Because this line is quite long for what it does, it’s handy to wrap it in a function which can be called in place of `std::cin.ignore()`.
+
+```cpp
+#include <limits> // for std::numeric_limits
+
+void ignoreLine()
+{
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
+```
+
+Since the last character the user entered must be a ‘\n’, we can tell std::cin to ignore buffered characters until it finds a newline character (which is removed as well).
+
+### Error case 3: Extraction fails
+
+Now consider the following execution
+
+```
+Enter a decimal number: a
+Enter one of the following: +, -, *, or /: Oops, that input is invalid.  Please try again.
+Enter one of the following: +, -, *, or /: Oops, that input is invalid.  Please try again.
+Enter one of the following: +, -, *, or /: Oops, that input is invalid.  Please try again.
+```
+
+When the user enters ‘a’, that character is placed in the buffer. Then operator>> tries to extract ‘a’ to variable x, which is of type double. Since ‘a’ can’t be converted to a double, operator>> can’t do the extraction. Two things happen at this point: ‘a’ is left in the buffer, and std::cin goes into “failure mode”.
+
+Once in “failure mode”, future requests for input extraction will silently fail. Thus in our calculator program, the output prompts still print, but any requests for further extraction are ignored. This means that instead waiting for us to enter an operation, the input prompt is skipped, and we get stuck in an infinite loop because there is no way to reach one of the valid cases.
+
+Fortunately, we can detect whether an extraction has failed:
+
+```cpp
+if (std::cin.fail()) // if the previous extraction failed
+{
+    // let's handle the failure
+    std::cin.clear(); // put us back in 'normal' operation mode
+    ignoreLine();     // and remove the bad input
+}
+```
+
+A failed extraction due to invalid input will cause the variable to be zero-initialized. Zero initialization means the variable is set to 0, 0.0, “”, or whatever value 0 converts to for that type.
+
+On Unix systems, entering an end-of-file (EOF) character (via ctrl-D) closes the input stream. This is something that std::cin.clear() can’t fix, so std::cin never leaves failure mode, which causes all subsequent input operations to fail. When this happens inside an infinite loop, your program will then loop endlessly until killed.
+
+To handle this case more elegantly, you can explicitly test for EOF:
+
+```cpp
+if (!std::cin) // if the previous extraction failed
+{
+    if (std::cin.eof()) // if the stream was closed
+    {
+        exit(0); // shut down the program now
+    }
+
+    // let's handle the failure
+    std::cin.clear(); // put us back in 'normal' operation mode
+    ignoreLine();     // and remove the bad input
+}
+```
+
+### Error case 4: Extraction succeeds but the user overflows a numeric value
+
+Consider the following simple example:
+
+```cpp
+#include <cstdint>
+#include <iostream>
+
+int main()
+{
+    std::int16_t x{}; // x is 16 bits, holds from -32768 to 32767
+    std::cout << "Enter a number between -32768 and 32767: ";
+    std::cin >> x;
+
+    std::int16_t y{}; // y is 16 bits, holds from -32768 to 32767
+    std::cout << "Enter another number between -32768 and 32767: ";
+    std::cin >> y;
+
+    std::cout << "The sum is: " << x + y << '\n';
+    return 0;
+}
+```
+
+What happens if the user enters a number that is too large (e.g. 40000)?
+
+```
+Enter a number between -32768 and 32767: 40000
+Enter another number between -32768 and 32767: The sum is: 32767
+```
+
+In the above case, std::cin goes immediately into “failure mode”, but also assigns the closest in-range value to the variable. Consequently, x is left with the assigned value of 32767. Additional inputs are skipped, leaving y with the initialized value of 0. We can handle this kind of error in the same way as a failed extraction.
+
+### Putting it all together
+
+```cpp
+#include <iostream>
+#include <limits>
+
+void ignoreLine()
+{
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
+
+double getDouble()
+{
+    while (true) // Loop until user enters a valid input
+    {
+        std::cout << "Enter a decimal number: ";
+        double x{};
+        std::cin >> x;
+
+        // Check for failed extraction
+        if (!std::cin) // if the previous extraction failed
+        {
+            if (std::cin.eof()) // if the stream was closed
+            {
+                exit(0); // shut down the program now
+            }
+
+            // let's handle the failure
+            std::cin.clear(); // put us back in 'normal' operation mode
+            ignoreLine();     // and remove the bad input
+
+            std::cout << "Oops, that input is invalid.  Please try again.\n";
+        }
+        else
+        {
+            ignoreLine(); // remove any extraneous input
+            return x;
+        }
+    }
+}
+
+char getOperator()
+{
+    while (true) // Loop until user enters a valid input
+    {
+        std::cout << "Enter one of the following: +, -, *, or /: ";
+        char operation{};
+        std::cin >> operation;
+
+        if (!std::cin) // if the previous extraction failed
+        {
+            if (std::cin.eof()) // if the stream was closed
+            {
+                exit(0); // shut down the program now
+            }
+
+            // let's handle the failure
+            std::cin.clear(); // put us back in 'normal' operation mode
+        }
+
+        ignoreLine(); // remove any extraneous input
+
+        // Check whether the user entered meaningful input
+        switch (operation)
+        {
+        case '+':
+        case '-':
+        case '*':
+        case '/':
+            return operation; // return it to the caller
+        default: // otherwise tell the user what went wrong
+            std::cout << "Oops, that input is invalid.  Please try again.\n";
+        }
+    } // and try again
+}
+
+void printResult(double x, char operation, double y)
+{
+    switch (operation)
+    {
+    case '+':
+        std::cout << x << " + " << y << " is " << x + y << '\n';
+        break;
+    case '-':
+        std::cout << x << " - " << y << " is " << x - y << '\n';
+        break;
+    case '*':
+        std::cout << x << " * " << y << " is " << x * y << '\n';
+        break;
+    case '/':
+        std::cout << x << " / " << y << " is " << x / y << '\n';
+        break;
+    default: // Being robust means handling unexpected parameters as well, even though getOperator() guarantees operation is valid in this particular program
+        std::cout << "Something went wrong: printResult() got an invalid operator.\n";
+    }
+}
+
+int main()
+{
+    double x{ getDouble() };
+    char operation{ getOperator() };
+    double y{ getDouble() };
+
+    printResult(x, operation, y);
+
+    return 0;
+}
+```
+
+### Conclusion
+
+As you write your programs, consider how users will misuse your program, especially around text input. For each point of text input, consider:
+
+-   Could extraction fail?
+-   Could the user enter more input than expected?
+-   Could the user enter meaningless input?
+-   Could the user overflow an input?
+
+You can use if statements and boolean logic to test whether input is expected and meaningful.
+
+The following code will clear any extraneous input:
+
+```cpp
+std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+```
+
+The following code will test for and fix failed extractions or overflow:
+
+```cpp
+if (!std::cin) // has a previous extraction failed or overflowed?
+{
+    if (std::cin.eof()) // if the stream was closed
+    {
+        exit(0); // shut down the program now
+    }
+
+    // yep, so let's handle the failure
+    std::cin.clear(); // put us back in 'normal' operation mode
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // and remove the bad input
+}
+```
+
+Finally, use loops to ask the user to re-enter input if the original input was invalid.
+
+## 7.18 — Assert and static_assert
+
+### Assertions
+
+An **assertion** is an expression that will be true unless there is a bug in the program. If the expression evaluates to `true`, the assertion statement does nothing. If the conditional expression evaluates to `false`, an error message is displayed and the program is terminated (via `std::abort`). This error message typically contains the expression that failed as text, along with the name of the code file and the line number of the assertion. This makes it very easy to tell not only what the problem was, but where in the code the problem occurred. This can help with debugging efforts immensely.
+
+Although asserts are most often used to validate function parameters, they can be used anywhere you would like to validate that something is true.
+
+Although we told you previously to avoid preprocessor macros, asserts are one of the few preprocessor macros that are considered acceptable to use. We encourage you to use assert statements liberally throughout your code.
+
+### Making your assert statements more descriptive
+
+Assertions and error handling are similar enough that their purposes can be confused, so let’s clarify:
+
+The goal of an assertion is to catch programming errors by documenting something that should never happen. If that thing does happen, then the programmer made an error somewhere, and that error can be identified and fixed. Assertions do not allow recovery from errors (after all, if something should never happen, there’s no need to recover from it), and the program will not produce a friendly error message.
+
+On the other hand, error handling is designed to gracefully handle cases that could happen (however rarely) in release configurations. These may or may not be recoverable, but one should always assume a user of the program may encounter them.
+
+### NDEBUG
+
+The assert macro comes with a small performance cost that is incurred each time the assert condition is checked. Furthermore, asserts should (ideally) never be encountered in production code (because your code should already be thoroughly tested). Consequently, many developers prefer that asserts are only active in debug builds. C++ comes with a way to turn off asserts in production code. If the macro NDEBUG is defined, the assert macro gets disabled.
+
+Some IDEs set NDEBUG by default as part of the project settings for release configurations. For example, in Visual Studio, the following preprocessor definitions are set at the project level: WIN32;NDEBUG;\_CONSOLE. If you’re using Visual Studio and want your asserts to trigger in release builds, you’ll need to remove NDEBUG from this setting.
+
+If you’re using an IDE or build system that doesn’t automatically define NDEBUG in release configuration, you will need to add it in the project or compilation settings manually.
+
+### static_assert
+
+C++ also has another type of assert called `static_assert`. A `static_assert` is an assertion that is checked at compile-time rather than at runtime, with a failing static_assert causing a compile error. Unlike assert, which is declared in the <cassert> header, static_assert is a keyword, so no header needs to be included to use it.
+
+```cpp
+static_assert(condition, diagnostic_message)
+```
+
+A few useful notes about static_assert:
+
+-   Because `static_assert` is evaluated by the compiler, the condition must be a constant expression.
+-   `static_assert` can be placed anywhere in the code file (even in the global namespace).
+-   `static_assert` is not compiled out in release builds.
+
+Prior to C++17, the diagnostic message must be supplied as the second parameter. Since C++17, providing a diagnostic message is optional.
+
+## 7.19 — Introduction to random number generation
+
+### Pseudo-random number generators (PRNGs)
+
+### Seeding a PRNG
+
+### Randomization in C++
+
+The randomization capabilities in C++ are accessible via the <random> header of the standard library. Within the random library, there are 6 PRNG families available for use (as of C++20):
+
+| Type name               | Family                                 | Period  | State size\* | Performance | Quality | Should I use this?          |
+| ----------------------- | -------------------------------------- | ------- | ------------ | ----------- | ------- | --------------------------- |
+| minstd_randminstd_rand0 | Linear congruential generator          | 2^31    | 4 bytes      | Bad         | Awful   | No                          |
+| mt19937mt19937_64       | Mersenne twister                       | 2^19937 | 2500 bytes   | Decent      | Decent  | Probably (see next section) |
+| ranlux24ranlux48        | Subtract and carry                     | 10^171  | 96 bytes     | Awful       | Good    | No                          |
+| knuth_b                 | Shuffled linear congruential generator | 2^31    | 1028 bytes   | Awful       | Bad     | No                          |
+| default_random_engine   | Any of above (implementation defined)  | Varies  | Varies       | ?           | ?       | No2                         |
+| rand()                  | Linear congruential generator          | 2^31    | 4 bytes      | Bad         | Awful   | Nono                        |
+
+## 7.20 — Generating random numbers using Mersenne Twister
+
+The random library has support for two Mersenne Twister types:
+
+-   mt19937 is a Mersenne Twister that generates 32-bit unsigned integers
+-   mt19937_64 is a Mersenne Twister that generates 64-bit unsigned integers
+
+```cpp
+#include <iostream>
+#include <random> // for std::mt19937
+
+int main()
+{
+	std::mt19937 mt{}; // Instantiate a 32-bit Mersenne Twister
+
+	// Print a bunch of random numbers
+	for (int count{ 1 }; count <= 40; ++count)
+	{
+		std::cout << mt() << '\t'; // generate a random number
+
+		// If we've printed 5 numbers, start a new row
+		if (count % 5 == 0)
+			std::cout << '\n';
+	}
+
+	return 0;
+}
+```
+
+### Rolling a dice using Mersenne Twister
+
+A **random number distribution** converts the output of a PRNG into some other distribution of numbers.
+
+There’s one random number distribution that’s extremely useful: a **uniform distribution** is a random number distribution that produces outputs between two numbers X and Y (inclusive) with equal probability.
+
+```cpp
+#include <iostream>
+#include <random> // for std::mt19937 and std::uniform_int_distribution
+
+int main()
+{
+	std::mt19937 mt{};
+
+	// Create a reusable random number generator that generates uniform numbers between 1 and 6
+	std::uniform_int_distribution die6{ 1, 6 }; // for C++14, use std::uniform_int_distribution<> die6{ 1, 6 };
+
+	// Print a bunch of random numbers
+	for (int count{ 1 }; count <= 40; ++count)
+	{
+		std::cout << die6(mt) << '\t'; // generate a roll of the die here
+
+		// If we've printed 10 numbers, start a new row
+		if (count % 10 == 0)
+			std::cout << '\n';
+	}
+
+	return 0;
+}
+```
+
+### The above program isn’t as random as it seems
+
+In the prior lesson (7.19 -- Introduction to random number generation), we covered that each number in a PRNG sequence is in a deterministic way. And that the state of the PRNG is initialized from the seed value. Thus, given any starting seed number, PRNGs will always generate the same sequence of numbers from that seed as a result.
+
+Because we are value initializing our Mersenne Twister, it is being initialized with the same seed every time the program is run. And because the seed is the same, the random numbers being generated are also the same.
+
+we just need to pick something that changes each time the program is run. Then we can use our PRNG to generate a unique sequence of pseudo-random numbers from that seed.
+
+There are two methods that are commonly used to do this:
+
+-   Use the system’s random device
+-   Use the system clock
+
+### Seeding with the system clock
+
+```cpp
+#include <iostream>
+#include <random> // for std::mt19937
+#include <chrono> // for std::chrono
+
+int main()
+{
+	// Seed our Mersenne Twister using steady_clock
+	std::mt19937 mt{ static_cast<std::mt19937::result_type>(
+		std::chrono::steady_clock::now().time_since_epoch().count()
+		) };
+
+	// Create a reusable random number generator that generates uniform numbers between 1 and 6
+	std::uniform_int_distribution die6{ 1, 6 }; // for C++14, use std::uniform_int_distribution<> die6{ 1, 6 };
+
+	// Print a bunch of random numbers
+	for (int count{ 1 }; count <= 40; ++count)
+	{
+		std::cout << die6(mt) << '\t'; // generate a roll of the die here
+
+		// If we've printed 10 numbers, start a new row
+		if (count % 10 == 0)
+			std::cout << '\n';
+	}
+
+	return 0;
+}
+```
+
+### Seeding with the random device
+
+```cpp
+#include <iostream>
+#include <random> // for std::mt19937 and std::random_device
+
+int main()
+{
+	std::mt19937 mt{ std::random_device{}() };
+
+	// Create a reusable random number generator that generates uniform numbers between 1 and 6
+	std::uniform_int_distribution die6{ 1, 6 }; // for C++14, use std::uniform_int_distribution<> die6{ 1, 6 };
+
+	// Print a bunch of random numbers
+	for (int count{ 1 }; count <= 40; ++count)
+	{
+		std::cout << die6(mt) << '\t'; // generate a roll of the die here
+
+		// If we've printed 10 numbers, start a new row
+		if (count % 10 == 0)
+			std::cout << '\n';
+	}
+
+	return 0;
+}
+```
+
+**Best practice**
+Use `std::random_device` to seed your PRNGs (unless it’s not implemented properly for your target compiler/architecture).
+
+### Random numbers across multiple functions or files (Random.h)
+
+Read at website
