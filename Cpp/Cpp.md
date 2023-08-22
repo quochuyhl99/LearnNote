@@ -735,7 +735,7 @@ int main()
 ### What the heck is std::ws?
 
 -   See the web page for example and explanation
--   If using s`td::getline()` to read strings, use `std::cin >> std::ws` input manipulator to ignore leading whitespace.
+-   If using `std::getline()` to read strings, use `std::cin >> std::ws` input manipulator to ignore leading whitespace.
 
 -   Using the extraction operator (>>) with std::cin ignores leading whitespace.
     std::getline() does not ignore leading whitespace unless you use input manipulator std::ws
@@ -3242,3 +3242,2018 @@ Use `std::random_device` to seed your PRNGs (unless it’s not implemented prope
 ### Random numbers across multiple functions or files (Random.h)
 
 Read at website
+
+# Chapter 8: Type Conversion and Function Overloading
+
+## 8.1 — Implicit type conversion (coercion)
+
+### Introduction to type conversion
+
+The process of producing a new value of some type from a value of a different type is called a **conversion**.
+
+Conversions do not change the value or type being converted. Instead, a new value with the desired type is created as a result of the conversion.
+
+### Implicit type conversion
+
+**Implicit type conversion** (also called **automatic type conversion** or **coercion**) is performed automatically by the compiler when one data type is required, but a different data type is supplied.
+
+```cpp
+double d{ 3 }; // int value 3 implicitly converted to type double
+d = 6; // int value 6 implicitly converted to type double
+
+float doSomething()
+{
+    return 3.0; // double value 3.0 implicitly converted to type float
+}
+
+double division{ 4.0 / 3 }; // int value 3 implicitly converted to type double
+
+if (5) // int value 5 implicitly converted to type bool
+{
+}
+
+void doSomething(long l)
+{
+}
+
+doSomething(3); // int value 3 implicitly converted to type long
+```
+
+### What happens when a type conversion is invoked
+
+When a type conversion is invoked (whether implicitly or explicitly), the compiler will determine whether it can convert the value from the current type to the desired type. If a valid conversion can be found, then the compiler will produce a new value of the desired type. Note that type conversions don’t change the value or type of the value or object being converted.
+
+If the compiler can’t find an acceptable conversion, then the compilation will fail with a compile error. Type conversions can fail for any number of reasons. For example, the compiler might not know how to convert a value between the original type and the desired type. In other cases, statements may disallow certain types of conversions. For example:
+
+```cpp
+int x { 3.5 }; // brace-initialization disallows conversions that result in data loss
+```
+
+Even though the compiler knows how to convert a double value to an int value, such conversions are disallowed when using brace-initialization.
+
+There are also cases where the compiler may not be able to figure out which of several possible type conversions is unambiguously the best one to use. We’ll see examples of this in lesson 8.12 -- Function overload resolution and ambiguous matches.
+
+So how does the compiler actually determine whether it can convert a value from one type to another?
+
+### The standard conversions
+
+The standard conversions can be broadly divided into 4 categories, each covering different types of conversions:
+
+-   Numeric promotions (covered in lesson 8.2 -- Floating-point and integral promotion)
+-   Numeric conversions (covered in lesson 8.3 -- Numeric conversions)
+-   Arithmetic conversions (covered in lesson 8.5 -- Arithmetic conversions)
+-   Other conversions (which includes various pointer and reference conversions)
+
+## 8.2 — Floating-point and integral promotion
+
+### Numeric promotion
+
+A **numeric promotion** is the type conversion of certain narrower numeric types (such as a char) to certain wider numeric types (typically int or double) that can be processed efficiently and is less likely to have a result that overflows.
+
+All numeric promotions are **value-preserving**, which means that the converted value will always be equal to the source value (it will just have a different type). Since all values of the source type can be precisely represented in the destination type, value-preserving conversions are said to be “safe conversions”.
+
+Because promotions are safe, the compiler will freely use numeric promotion as needed, and will not issue a warning when doing so
+
+### Numeric promotion reduces redundancy
+
+Numeric promotion solves another problem as well. Consider the case where you wanted to write a function to print a value of type `int`:
+
+```cpp
+#include <iostream>
+
+void printInt(int x)
+{
+    std::cout << x << '\n';
+}
+```
+
+While this is straightforward, what happens if we want to also be able to print a value of type short, or type char? If type conversions did not exist, we’d have to write a different print function for short and another one for char. And don’t forget another version for unsigned char, signed char, unsigned short, wchar_t, char8_t, char16_t, and char32_t! You can see how this quickly becomes unmanageable.
+
+### Numeric promotion categories
+
+The numeric promotion rules are divided into two subcategories: `integral promotions` and `floating point promotions`. Only the conversions listed in these categories are considered to be numeric promotions.
+
+### Floating point promotions
+
+Using the **floating point promotion** rules, a value of type `float` can be converted to a value of type `double`.
+
+This means we can write a function that takes a `double` and then call it with either a `double` or a `float` value:
+
+```cpp
+#include <iostream>
+
+void printDouble(double d)
+{
+    std::cout << d << '\n';
+}
+
+int main()
+{
+    printDouble(5.0); // no conversion necessary
+    printDouble(4.0f); // numeric promotion of float to double
+
+    return 0;
+}
+```
+
+### Integral promotions
+
+Using the integral promotion rules, the following conversions can be made:
+
+-   signed char or signed short can be converted to int.
+-   unsigned char, char8_t, and unsigned short can be converted to int if int can hold the entire range of the type, or unsigned int otherwise.
+-   If char is signed by default, it follows the signed char conversion rules above. If it is unsigned by default, it follows the unsigned char conversion rules above.
+-   bool can be converted to int, with false becoming 0 and true becoming 1.
+
+Assuming an 8 bit byte and an `int` size of 4 bytes or larger (which is typical these days), the above basically means that `bool`, `char`, `signed char`, `unsigned char`, `signed short`, and `unsigned short` all get promoted to `int`.
+
+In most cases, this lets us write a function taking an int parameter, and then use it with a wide variety of other integral types. For example:
+
+```cpp
+#include <iostream>
+
+void printInt(int x)
+{
+    std::cout << x << '\n';
+}
+
+int main()
+{
+    printInt(2);
+
+    short s{ 3 }; // there is no short literal suffix, so we'll use a variable for this one
+    printInt(s); // numeric promotion of short to int
+
+    printInt('a'); // numeric promotion of char to int
+    printInt(true); // numeric promotion of bool to int
+
+    return 0;
+}
+```
+
+### Not all widening conversions are numeric promotions
+
+Some widening type conversions (such as `char` to `short`, or `int` to `long`) are not considered to be numeric promotions in C++ (they are **numeric conversions**, which we’ll cover shortly in lesson 8.3 -- Numeric conversions). This is because such conversions do not assist in the goal of converting smaller types to larger types that can be processed more efficiently.
+
+The distinction is mostly academic. However, in certain cases, the compiler will favor numeric promotions over numeric conversions. We’ll see examples where this makes a difference when we cover function overload resolution (in upcoming lesson 8.12 -- Function overload resolution and ambiguous matches).
+
+## 8.3 — Numeric conversions
+
+There are five basic types of numeric conversions.
+
+1. Converting an integral type to any other integral type (excluding integral promotions):
+
+    ```cpp
+    short s = 3; // convert int to short
+    long l = 3; // convert int to long
+    char ch = s; // convert short to char
+    unsigned int u = 3; // convert int to unsigned int
+    ```
+
+2. Converting a floating point type to any other floating point type (excluding floating point promotions):
+
+    ```cpp
+    float f = 3.0; // convert double to float
+    long double ld = 3.0; // convert double to long double
+    ```
+
+3. Converting a floating point type to any integral type:
+
+    ```cpp
+    int i = 3.5; // convert double to int
+    ```
+
+4. Converting an integral type to any floating point type:
+
+    ```cpp
+    double d = 3; // convert int to double
+    ```
+
+5. Converting an integral type or a floating point type to a bool:
+    ```cpp
+    bool b1 = 3; // convert int to bool
+    bool b2 = 3.0; // convert double to bool
+    ```
+
+### Safe and potentially unsafe conversions
+
+Numeric conversions fall into one of three safety categories:
+
+1. Value-preserving conversions are safe numeric conversions where the destination type can precisely represent all the values in the source type.
+
+```cpp
+int main()
+{
+    int n { 5 };
+    long l = n; // okay, produces long value 5
+
+    short s { 5 };
+    double d = s; // okay, produces double value 5.0
+
+    return 0;
+}
+```
+
+A value converted using a value-preserving conversion can always be converted back to the source type, resulting in a value that is equivalent to the original value:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int n = static_cast<int>(static_cast<long>(3)); // convert int 3 to long and back
+    std::cout << n << '\n';                         // prints 3
+
+    char c = static_cast<char>(static_cast<double>('c')); // convert 'c' to double and back
+    std::cout << c << '\n';                               // prints 'c'
+
+    return 0;
+}
+```
+
+2. Reinterpretive conversions are potentially unsafe numeric conversions where the result may be outside the range of the source type. Signed/unsigned conversions fall into this category.
+
+```cpp
+int main()
+{
+    int n1 { 5 };
+    unsigned int u1 { n1 }; // okay: will be converted to unsigned int 5 (value preserved)
+
+    int n2 { -5 };
+    unsigned int u2 { n2 }; // bad: will result in large integer outside range of signed int
+
+    return 0;
+}
+```
+
+3. Lossy conversions are potentially unsafe numeric conversions where some data may be lost during the conversion.
+
+For example, `double` to `int` is a conversion that may result in data loss:
+
+```cpp
+int i = 3.0; // okay: will be converted to int value 3 (value preserved)
+int j = 3.5; // data lost: will be converted to int value 3 (fractional value 0.5 lost)
+```
+
+Conversion from `double` to `float` can also result in data loss:
+
+```cpp
+float f = 1.2;        // okay: will be converted to float value 1.2 (value preserved)
+float g = 1.23456789; // data lost: will be converted to float 1.23457 (precision lost)
+```
+
+Converting a value that has lost data back to the source type will result in a value that is different than the original value:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    double d { static_cast<double>(static_cast<int>(3.5)) }; // convert double 3.5 to int and back
+    std::cout << d << '\n'; // prints 3
+
+    double d2 { static_cast<double>(static_cast<float>(1.23456789)) }; // convert double 1.23456789 to float and back
+    std::cout << d2 << '\n'; // prints 1.23457
+
+    return 0;
+}
+```
+
+### More on numeric conversions
+
+-   In all cases, converting a value into a type whose range doesn’t support that value will lead to results that are probably unexpected.
+
+-   Converting from a larger integral or floating point type to a smaller type from the same family will generally work so long as the value fits in the range of the smaller type.
+
+-   In the case of floating point values, some rounding may occur due to a loss of precision in the smaller type.
+
+-   Converting from an integer to a floating point number generally works as long as the value fits within the range of the floating point type.
+
+-   Converting from a floating point to an integer works as long as the value fits within the range of the integer, but any fractional values are lost.
+
+## 8.4 — Narrowing conversions, list initialization, and constexpr initializers
+
+The following conversions are defined to be narrowing:
+
+-   From a floating point type to an integral type.
+-   From a floating point type to a narrower or lesser ranked floating point type, unless the value being converted is constexpr and is in range of the destination type (even if the destination type doesn’t have the precision to store all the significant digits of the number).
+-   From an integral to a floating point type, unless the value being converted is constexpr and whose value can be stored exactly in the destination type.
+-   From an integral type to another integral type that cannot represent all values of the original type, unless the value being converted is constexpr and whose value can be stored exactly in the destination type. This covers both wider to narrower integral conversions, as well as integral sign conversions (signed to unsigned, or vice-versa).
+
+### Make intentional narrowing conversions explicit
+
+If you need to perform a narrowing conversion, use `static_cast` to convert it into an explicit conversion.
+
+```cpp
+void someFcn(int i)
+{
+}
+
+int main()
+{
+    double d{ 5.0 };
+
+    someFcn(d); // bad: implicit narrowing conversion will generate compiler warning
+
+    // good: we're explicitly telling the compiler this narrowing conversion is intentional
+    someFcn(static_cast<int>(d)); // no warning generated
+
+    return 0;
+}
+```
+
+### Brace initialization disallows narrowing conversions
+
+Narrowing conversions are disallowed when using brace initialization (which is one of the primary reasons this initialization form is preferred), and attempting to do so will produce a compile error.
+
+If you actually want to do a narrowing conversion inside a brace initialization, use `static_cast` to convert the narrowing conversion into an explicit conversion:
+
+```cpp
+int main()
+{
+    double d { 3.5 };
+
+    // static_cast<int> converts double to int, initializes i with int result
+    int i { static_cast<int>(d) };
+
+    return 0;
+}
+```
+
+### Some constexpr conversions aren’t considered narrowing
+
+### List initialization with constexpr initializers
+
+This allows us to avoid:
+
+-   Having to use literal suffixes in most cases
+-   Having to clutter our initializations with a static_cast
+
+For example:
+
+```cpp
+int main()
+{
+    // We can avoid literals with suffixes
+    unsigned int u { 5 }; // okay (we don't need to use `5u`)
+    float f { 1.5 };      // okay (we don't need to use `1.5f`)
+
+    // We can avoid static_casts
+    constexpr int n{ 5 };
+    double d { n };       // okay (we don't need a static_cast here)
+    short s { 5 };        // okay (there is no suffix for short, we don't need a static_cast here)
+
+    return 0;
+}
+```
+
+## 8.5 — Arithmetic conversions
+
+Consider the following expression:
+
+```cpp
+int x { 2 + 3 };
+```
+
+When binary operator+ is invoked, it is given two operands, both of type `int`. Because both operands are of the same type, that type will be used to perform the calculation and to return the result. Thus, `2 + 3` will evaluate to `int` value `5`
+
+But what happens when the operands of a binary operator are of different types?
+
+```cpp
+??? y { 2 + 3.5 };
+```
+
+In this case, operator+ is being given one operand of type `int` and another of type `double`. Should the result of the operator be returned as an `int`, a `double`, or possibly something else altogether? When defining a variable, we can choose what type it has. In other cases, for example when using `std::cout <<`, the type the calculation evaluates to changes the behavior of what is output.
+
+### The operators that require operands of the same type
+
+The following operators require their operands to be of the same type:
+
+-   The binary arithmetic operators: +, -, \*, /, %
+-   The binary relational operators: <, >, <=, >=, ==, !=
+-   The binary bitwise arithmetic operators: &, ^, |
+-   The conditional operator ?: (excluding the condition, which is expected to be of type `bool`)
+
+### The usual arithmetic conversion rules
+
+The compiler has a prioritized list of types that looks something like this:
+
+-   long double (highest)
+-   double
+-   float
+-   unsigned long long
+-   long long
+-   unsigned long
+-   long
+-   unsigned int
+-   int (lowest)
+
+There are only two rules:
+
+-   If the type of at least one of the operands is on the priority list, the operand with lower priority is converted to the type of the operand with higher priority.
+-   Otherwise (the type of neither operand is on the list), both operands are numerically promoted (see 8.2 -- Floating-point and integral promotion).
+
+### Some examples
+
+First, let’s add an int and a double:
+
+```cpp
+#include <iostream>
+#include <typeinfo> // for typeid()
+
+int main()
+{
+    int i{ 2 };
+    double d{ 3.5 };
+    std::cout << typeid(i + d).name() << ' ' << i + d << '\n'; // show us the type of i + d
+
+    return 0;
+}
+```
+
+In this case, the `double` operand has the highest priority, so the lower priority operand (of type `int`) is type converted to `double` value `2.0`. Then `double` values `2.0` and `3.5` are added to produce `double` result `5.5`.
+
+Result:
+
+```
+double 5.5
+```
+
+Now let’s add two values of type `short`:
+
+```cpp
+#include <iostream>
+#include <typeinfo> // for typeid()
+
+int main()
+{
+    short a{ 4 };
+    short b{ 5 };
+    std::cout << typeid(a + b).name() << ' ' << a + b << '\n'; // show us the type of a + b
+
+    return 0;
+}
+```
+
+Because neither operand appears on the priority list, both operands undergo integral promotion to type `int`. The result of adding two ints is an `int`, as you would expect:
+
+```
+int 9
+```
+
+### Signed and unsigned issues
+
+```cpp
+#include <iostream>
+#include <typeinfo> // for typeid()
+
+int main()
+{
+    std::cout << typeid(5u-10).name() << ' ' << 5u - 10 << '\n'; // 5u means treat 5 as an unsigned integer
+
+    return 0;
+}
+```
+
+Because the `unsigned int` operand has higher priority, the `int` operand is converted to an `unsigned int`. And since the value `-5` is out of range of an `unsigned int`, we get a result we don’t expect.
+
+```
+unsigned int 4294967291
+```
+
+Other example:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    std::cout << std::boolalpha << (-3 < 5u) << '\n';
+
+    return 0;
+}
+```
+
+While it’s clear to us that `5` is greater than `-3`, when this expression evaluates, `-3` is converted to a large `unsigned int` that is larger than `5`. Thus, the above prints `false` rather than the expected result of `true`.
+
+This is one of the primary reasons to avoid unsigned integers -- when you mix them with signed integers in arithmetic expressions, you’re at risk for unexpected results. And the compiler probably won’t even issue a warning.
+
+## 8.6 — Explicit type conversion (casting) and static_cast
+
+### Type casting
+
+C++ supports 5 different types of casts: `C-style casts`, `static casts`, `const casts`, `dynamic casts`, and `reinterpret casts`. The latter four are sometimes referred to as **named casts**.
+
+Avoid `const casts` and `reinterpret casts` unless you have a very good reason to use them.
+
+### C-style casts
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int x { 10 };
+    int y { 4 };
+
+    double d { (double)x / y }; // convert x to a double so we get floating point division
+    double d { double(x) / y }; // this is still ok
+    std::cout << d << '\n'; // prints 2.5
+
+    return 0;
+}
+```
+
+Although a `C-style cast` appears to be a single cast, it can actually perform a variety of different conversions depending on context. This can include a `static cast`, a `const cast` or a `reinterpret cast` (the latter two of which we mentioned above you should avoid).
+=> Avoid using C-style casts.
+
+### static_cast
+
+```cpp
+static_cast<Type>(x)
+```
+
+The main advantage of `static_cast` is that it provides **compile-time** type checking, making it harder to make an inadvertent error.
+
+```cpp
+// a C-style string literal can't be converted to an int, so the following is an invalid conversion
+int x { static_cast<int>("Hello") }; // invalid: will produce compilation error
+
+const int x{ 5 };
+// can't remove const like C-style cast
+int& ref{ static_cast<int&>(x) }; // invalid: will produce compilation error
+```
+
+### Using static_cast to make narrowing conversions explicit
+
+Compilers will often issue warnings when a potentially unsafe (narrowing) implicit type conversion is performed. For example, consider the following program, compiler will typically complain that converting a double to an int may result in loss of data:
+
+```cpp
+int i { 100 };
+i = i / 2.5;
+```
+
+To tell the compiler that we explicitly mean to do this:
+
+```cpp
+int i { 100 };
+i = static_cast<int>(i / 2.5);
+```
+
+## 8.7 — Typedefs and type aliases
+
+### Type aliases
+
+In C++, **using** is a keyword that creates an alias for an existing data type. To create such a type alias, we use the `using` keyword, followed by a name for the type alias, followed by an equals sign and an existing data type. For example:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    using Distance = double; // define Distance as an alias for type double
+
+    Distance milesToDestination{ 3.4 }; // defines a variable of type double
+
+    std::cout << milesToDestination << '\n'; // prints a double value
+
+    return 0;
+}
+```
+
+### Naming type aliases
+
+Name your type aliases starting with a capital letter and do not use a suffix (unless you have a specific reason to do otherwise).
+
+### Type aliases are not distinct types
+
+An alias does not actually define a new, distinct type (one that is considered separate from other types) -- it just introduces a new identifier for an existing type. A type alias is completely interchangeable with the aliased type.
+
+### The scope of a type alias
+
+a type alias defined inside a block has block scope and is usable only within that block, whereas a type alias defined in the global namespace has global scope and is usable to the end of the file.
+
+If you need to use one or more type aliases across multiple files, they can be defined in a header file and #included into any code files that needs to use the definition:
+
+```cpp
+#ifndef MYTYPES_H
+#define MYTYPES_H
+
+    using Miles = long;
+    using Speed = long;
+
+#endif
+```
+
+Type aliases #included this way will be imported into the global namespace and thus have global scope.
+
+### Typedefs
+
+A **typedef** (which is short for “type definition”) is an older way of creating an alias for a type. To create a typedef alias, we use the `typedef` keyword:
+
+```cpp
+// The following aliases are identical
+typedef long Miles;
+using Miles = long;
+```
+
+Prefer type aliases over typedefs.
+
+### When should we use type aliases?
+
+-   Using type aliases for platform independent coding
+-   Using type aliases to make complex types easier to read
+-   Using type aliases to document the meaning of a value
+-   Using type aliases for easier code maintenance
+
+Use type aliases judiciously, when they provide a clear benefit to code readability or code maintena
+
+## 8.8 — Type deduction for objects using the auto keyword
+
+### Type deduction for initialized variables
+
+**Type deduction** (also sometimes called **type inference**) is a feature that allows the compiler to deduce the type of an object from the object’s initializer. To use type deduction, the `auto` keyword is used in place of the variable’s type:
+
+```cpp
+int main()
+{
+    auto d{ 5.0 }; // 5.0 is a double literal, so d will be type double
+    auto i{ 1 + 2 }; // 1 + 2 evaluates to an int, so i will be type int
+    auto x { i }; // i is an int, so x will be type int too
+
+    return 0;
+}
+```
+
+Type deduction will not work for objects that do not have initializers or empty initializers. Thus, the following is not valid:
+
+```cpp
+int main()
+{
+    auto x; // The compiler is unable to deduce the type of x
+    auto y{ }; // The compiler is unable to deduce the type of y
+
+    return 0;
+}
+```
+
+### Type deduction drops const / constexpr qualifiers
+
+In most cases, type deduction will drop the const or constexpr qualifier from deduced types. If you want a deduced type to be `const` or `constexpr`, you must supply the `const` or `constexpr` yourself. To do so, simply use the `const` or `constexpr` keyword in conjunction with the `auto` keyword:
+
+```cpp
+int main()
+{
+    const int x { 5 };  // x has type const int (compile-time const)
+    auto y { x };       // y will be type int (const is dropped)
+
+    constexpr auto z { x }; // z will be type constexpr int (constexpr is reapplied)
+
+    return 0;
+}
+```
+
+### Type deduction for string literals
+
+For historical reasons, string literals in C++ have a strange type. Therefore, the following probably won’t work as expected:
+
+```cpp
+auto s { "Hello, world" }; // s will be type const char*, not std::string
+```
+
+If you want the type deduced from a string literal to be std::string or std::string_view, you’ll need to use the `s` or `sv` literal suffixes (covered in lesson 4.15 -- Literals):
+
+```cpp
+#include <string>
+#include <string_view>
+
+int main()
+{
+    using namespace std::literals; // easiest way to access the s and sv suffixes
+
+    auto s1 { "goo"s };  // "goo"s is a std::string literal, so s1 will be deduced as a std::string
+    auto s2 { "moo"sv }; // "moo"sv is a std::string_view literal, so s2 will be deduced as a std::string_view
+
+    return 0;
+}
+```
+
+### Type deduction benefits and downsides
+
+Read on website
+
+## 8.9 — Type deduction for functions
+
+```cpp
+auto add(int x, int y)
+{
+    return x + y;
+}
+```
+
+Because the return statement is returning an `int` value, the compiler will deduce that the return type of this function is `int`.
+
+When using an `auto` return type, all return statements within the function must return values of the same type, otherwise an error will result. For example:
+
+```cpp
+auto someFcn(bool b)
+{
+    if (b)
+        return 5; // return type int
+    else
+        return 6.7; // return type double
+}
+```
+
+In the above function, the two return statements return values of different types, so the compiler will give an error.
+
+A major downside of functions that use an auto return type is that such functions must be fully defined before they can be used (a forward declaration is not sufficient). For example:
+
+```cpp
+#include <iostream>
+
+auto foo();
+
+int main()
+{
+    std::cout << foo() << '\n'; // the compiler has only seen a forward declaration at this point
+
+    return 0;
+}
+
+auto foo()
+{
+    return 5;
+}
+```
+
+=> Favor explicit return types over function return type deduction for normal functions.
+
+### Trailing return type syntax
+
+Consider the following function:
+
+```cpp
+int add(int x, int y)
+{
+  return (x + y);
+}
+```
+
+Using the **trailing return syntax**, this could be equivalently written as:
+
+```cpp
+auto add(int x, int y) -> int
+{
+  return (x + y);
+}
+```
+
+The trailing return syntax is also required for some advanced features of C++, such as lambdas (which we cover in lesson 12.7 -- Introduction to lambdas (anonymous functions)).
+
+### Type deduction can’t be used for function parameter types
+
+```cpp
+#include <iostream>
+
+void addAndPrint(auto x, auto y)
+{
+    std::cout << x + y << '\n';
+}
+
+int main()
+{
+    addAndPrint(2, 3); // case 1: call addAndPrint with int parameters
+    addAndPrint(4.5, 6.7); // case 2: call addAndPrint with double parameters
+
+    return 0;
+}
+```
+
+prior to C++20, the above program won’t compile (you’ll get an error about function parameters not being able to have an auto type).
+
+In C++20, the `auto` keyword was extended so that the above program will compile and function correctly -- however, `auto` is not invoking type deduction in this case. Rather, it is triggering a different feature called `function templates` that was designed to actually handle such cases.
+
+We introduce function templates in lesson 8.14 -- Function templates, and discuss use of auto in the context of function templates in lesson 8.16 -- Function templates with multiple template types.
+
+## 8.10 — Introduction to function overloading
+
+Functions can be overloaded so long as each overloaded function can be differentiated by the compiler. If an overloaded function can not be differentiated, a compile error will result.
+
+```cpp
+int add(int x, int y) // integer version
+{
+    return x + y;
+}
+
+double add(double x, double y) // floating point version
+{
+    return x + y;
+}
+
+int main()
+{
+    return 0;
+}
+```
+
+Operators can also be overloaded in a similar manner. We’ll discuss operator overloading in 14.1 -- Introduction to operator overloading.
+
+### Introduction to overload resolution
+
+when a function call is made to a function that has been overloaded, the compiler will try to match the function call to the appropriate overload based on the arguments used in the function call. This is called **overload resolution**.
+
+```cpp
+#include <iostream>
+
+int add(int x, int y)
+{
+    return x + y;
+}
+
+double add(double x, double y)
+{
+    return x + y;
+}
+
+int main()
+{
+    std::cout << add(1, 2); // calls add(int, int)
+    std::cout << '\n';
+    std::cout << add(1.2, 3.4); // calls add(double, double)
+
+    return 0;
+}
+```
+
+### Making it compile
+
+In order for a program using overloaded functions to compile, two things have to be true:
+
+-   Each overloaded function has to be differentiated from the others. We discuss how functions can be differentiated in lesson 8.11 -- Function overload differentiation.
+-   Each call to an overloaded function has to resolve to an overloaded function. We discuss how the compiler matches function calls to overloaded functions in lesson 8.12 -- Function overload resolution and ambiguous matches.
+
+If an overloaded function is not differentiated, or if a function call to an overloaded function can not be resolved to an overloaded function, then a compile error will result.
+
+## 8.11 — Function overload differentiation
+
+### How overloaded functions are differentiated
+
+| Function property    | Used for differentiation | Notes                                                                                        |
+| -------------------- | ------------------------ | -------------------------------------------------------------------------------------------- |
+| Number of parameters | Yes                      |
+| Type of parameters   | Yes                      | Excludes typedefs, type aliases, and const qualifier on value parameters. Includes ellipses. |
+| Return type          | No                       |
+
+For member functions, additional function-level qualifiers are also considered:
+
+| Function-level qualifier | Used for overloading |
+| ------------------------ | -------------------- |
+| const or volatile        | Yes                  |
+| Ref-qualifiers           | Yes                  |
+
+As an example, a const member function can be differentiated from an otherwise identical non-const member function (even if they share the same set of parameters).
+
+### Type signature
+
+A function’s **type signature** (generally called a **signature**) is defined as the parts of the function header that are used for differentiation of the function. In C++, this includes the function name, number of parameter, parameter type, and function-level qualifiers. It notably does not include the return type.
+
+## 8.12 — Function overload resolution and ambiguous matches
+
+what happens in cases where the argument types in the function call don’t exactly match the parameter types in any of the overloaded functions? For example:
+
+```cpp
+#include <iostream>
+
+void print(int x)
+{
+     std::cout << x << '\n';
+}
+
+void print(double d)
+{
+     std::cout << d << '\n';
+}
+
+int main()
+{
+     print('a'); // char does not match int or double
+     print(5L); // long does not match int or double
+
+     return 0;
+}
+```
+
+Just because there is no exact match here doesn’t mean a match can’t be found -- after all, a `char` or `long` can be implicitly type converted to an `int` or a `double`. But which is the best conversion to make in each case?
+
+### Resolving overloaded function calls
+
+When a function call is made to an overloaded function, the compiler steps through a sequence of rules to determine which (if any) of the overloaded functions is the best match.
+
+At each step, the compiler applies a bunch of different type conversions to the argument(s) in the function call. For each conversion applied, the compiler checks if any of the overloaded functions are now a match. After all the different type conversions have been applied and checked for matches, the step is done. The result will be one of three possible outcomes:
+
+-   No matching functions were found. The compiler moves to the next step in the sequence.
+-   A single matching function was found. This function is considered to be the best match. The matching process is now complete, and subsequent steps are not executed.
+-   More than one matching function was found. The compiler will issue an ambiguous match compile error. We’ll discuss this case further in a bit.
+
+If the compiler reaches the end of the entire sequence without finding a match, it will generate a compile error that no matching overloaded function could be found for the function call.
+
+### The argument matching sequence
+
+6 steps read on website
+
+### Ambiguous matches
+
+read on website
+
+### Resolving ambiguous matches
+
+1. define a new overloaded function that takes parameters of exactly the type you are trying to call the function
+2. explicitly cast the ambiguous argument(s) to match the type of the function you want to call
+
+```cpp
+int x{ 0 };
+print(static_cast<unsigned int>(x)); // will call print(unsigned int)
+```
+
+3. If your argument is a literal, you can use the literal suffix to ensure your literal is interpreted as the correct type:
+
+```cpp
+print(0u); // will call print(unsigned int) since 'u' suffix is unsigned int, so this is now an exact match
+```
+
+### Matching for functions with multiple arguments
+
+read on website
+
+## 8.13 — Default arguments
+
+A **default argument** is a default value provided for a function parameter. For example:
+
+```cpp
+#include <iostream>
+
+void print(int x, int y=4) // 4 is the default argument
+{
+    std::cout << "x: " << x << '\n';
+    std::cout << "y: " << y << '\n';
+}
+
+int main()
+{
+    print(1, 2); // y will use user-supplied argument 2
+    print(3); // y will use default argument 4, as if we had called print(3, 4)
+
+    return 0;
+}
+```
+
+Note that you must use the equals sign to specify a default argument. Using parenthesis or brace initialization won’t work:
+
+```cpp
+void foo(int x = 5);   // ok
+void goo(int x ( 5 )); // compile error
+void boo(int x { 5 }); // compile error
+```
+
+### Multiple default arguments
+
+A function can have multiple parameters with default arguments:
+
+```cpp
+#include <iostream>
+
+void print(int x=10, int y=20, int z=30)
+{
+    std::cout << "Values: " << x << " " << y << " " << z << '\n';
+}
+
+int main()
+{
+    print(1, 2, 3); // all explicit arguments
+    print(1, 2); // rightmost argument defaulted
+    print(1); // two rightmost arguments defaulted
+    print(); // all arguments defaulted
+
+    return 0;
+}
+```
+
+C++ does not (as of C++20) support a function call syntax such as `print(,,3)`
+The following is not allowed:
+
+```cpp
+void print(int x=10, int y); // not allowed
+```
+
+### Default arguments can not be redeclared
+
+Once declared, a default argument can not be redeclared (in the same file). That means for a function with a forward declaration and a function definition, the default argument can be declared in either the forward declaration or the function definition, but not both.
+
+```cpp
+#include <iostream>
+
+void print(int x, int y=4); // forward declaration
+
+void print(int x, int y=4) // error: redefinition of default argument
+{
+    std::cout << "x: " << x << '\n';
+    std::cout << "y: " << y << '\n';
+}
+```
+
+Best practice is to declare the default argument in the forward declaration and not in the function definition, as the forward declaration is more likely to be seen by other files (particularly if it’s in a header file).
+
+### Default arguments and function overloading
+
+```cpp
+void print(int x);
+void print(int x, int y = 10);
+void print(int x, double y = 20.5);
+```
+
+Parameters with default values will differentiate a function overload (meaning the above will compile).
+However, such functions can lead to potentially ambiguous function calls. For example:
+
+```cpp
+print(1, 2); // will resolve to print(int, int)
+print(1, 2.5); // will resolve to print(int, double)
+print(1); // ambiguous function call
+```
+
+## 8.14 — Function templates
+
+C++ supports 3 different kinds of template parameters:
+
+-   Type template parameters (where the template parameter represents a type).
+-   Non-type template parameters (where the template parameter represents a constexpr value).
+-   Template template parameters (where the template parameter represents a template).
+
+Type template parameters are by far the most common, so we’ll be focused on those. We’ll cover non-type template parameters in the chapter on arrays.
+
+```cpp
+template <typename T> // this is the template parameter declaration
+T max(T x, T y) // this is the function template definition for max<T>
+{
+    return (x < y) ? y : x;
+}
+```
+
+## 8.15 — Function template instantiation
+
+### Using a function template
+
+```cpp
+max<actual_type>(arg1, arg2); // actual_type is some actual type, like int or double
+```
+
+```cpp
+#include <iostream>
+
+template <typename T>
+T max(T x, T y) // function template for max(T, T)
+{
+    return (x < y) ? y : x;
+}
+
+int main()
+{
+    std::cout << max<int>(1, 2) << '\n';    // instantiates and calls function max<int>(int, int)
+    std::cout << max<int>(4, 3) << '\n';    // calls already instantiated function max<int>(int, int)
+    std::cout << max<double>(1, 2) << '\n'; // instantiates and calls function max<double>(double, double)
+
+    return 0;
+}
+```
+
+When the compiler encounters the function call `max<int>(1, 2)`, it will determine that a function definition for `max<int>(int, int)` does not already exist. Consequently, the compiler will use our `max<T>` function template to create one.
+
+Here’s the same example as above, showing what the compiler actually compiles after all instantiations are done:
+
+```cpp
+#include <iostream>
+
+// a declaration for our function template (we don't need the definition any more)
+template <typename T>
+T max(T x, T y);
+
+template<>
+int max<int>(int x, int y) // the generated function max<int>(int, int)
+{
+    return (x < y) ? y : x;
+}
+
+template<>
+double max<double>(double x, double y) // the generated function max<double>(double, double)
+{
+    return (x < y) ? y : x;
+}
+
+int main()
+{
+    std::cout << max<int>(1, 2) << '\n';    // instantiates and calls function max<int>(int, int)
+    std::cout << max<int>(4, 3) << '\n';    // calls already instantiated function max<int>(int, int)
+    std::cout << max<double>(1, 2) << '\n'; // instantiates and calls function max<double>(double, double)
+
+    return 0;
+}
+```
+
+You can compile this yourself and see that it works
+
+One additional thing to note here: when we instantiate `max<double>`, the instantiated function has parameters of type `double`. Because we’ve provided `int` arguments, those arguments will be implicitly converted to `double`.
+
+### Template argument deduction
+
+In cases where the type of the arguments match the actual type we want, we do not need to specify the actual type -- instead, we can use **template argument deduction** to have the compiler deduce the actual type that should be used from the argument types in the function call.
+
+```cpp
+std::cout << max<int>(1, 2) << '\n'; // specifying we want to call max<int>
+std::cout << max<>(1, 2) << '\n';
+std::cout << max(1, 2) << '\n';
+```
+
+# Chapter 9: Compound Types: References and Pointers
+
+## 9.1 — Introduction to compound data types
+
+**Compound data types** (also sometimes called **composite data types**) are data types that can be constructed from fundamental data types (or other compound data types). Each compound data type has its own unique properties as well.
+
+C++ supports the following compound types:
+
+-   Functions
+-   Arrays
+-   Pointer types:
+    -   Pointer to object
+    -   Pointer to function
+-   Pointer to member types:
+    -   Pointer to data member
+    -   Pointer to member function
+-   Reference types:
+    -   L-value references
+    -   R-value references
+-   Enumerated types:
+    -   Unscoped enumerations
+    -   Scoped enumerations
+-   Class types:
+    -   Structs
+    -   Classes
+    -   Unions
+
+## 9.2 — Value categories (lvalues and rvalues)
+
+### The properties of an expression
+
+To help determine how expressions should evaluate and where they can be used, all expressions in C++ have two properties: a type and a value category.
+
+### The type of an expression
+
+The type of an expression is equivalent to the type of the value, object, or function that results from the evaluated expression. For example:
+
+```cpp
+int main()
+{
+    auto v1 { 12 / 4 }; // int / int => int
+    auto v2 { 12.0 / 4 }; // double / int => double
+
+    return 0;
+}
+```
+
+### The value category of an expression
+
+The **value category** of an expression (or subexpression) indicates whether an expression resolves to a value, a function, or an object of some kind.
+
+Prior to C++11, there were only two possible value categories: `lvalue` and `rvalue`.
+
+### Lvalue and rvalue expressions
+
+An **lvalue** (pronounced “ell-value”, short for “left value” or “locator value”, and sometimes written as `l-value`) is an expression that evaluates to an identifiable object or function (or bit-field).
+
+An **rvalue** (pronounced “arr-value”, short for “right value”, and sometimes written as `r-value`) is an expression that is not an l-value. Commonly seen rvalues include literals (except C-style string literals, which are lvalues) and the return value of functions and operators. Rvalues aren’t identifiable (meaning they have to be used immediately), and only exist within the scope of the expression in which they are used.
+
+```cpp
+int return5()
+{
+    return 5;
+}
+
+int main()
+{
+    int x{ 5 }; // 5 is an rvalue expression
+    const double d{ 1.2 }; // 1.2 is an rvalue expression
+
+    int y { x }; // x is a modifiable lvalue expression
+    const double e { d }; // d is a non-modifiable lvalue expression
+    int z { return5() }; // return5() is an rvalue expression (since the result is returned by value)
+
+    int w { x + 1 }; // x + 1 is an rvalue expression
+    int q { static_cast<int>(d) }; // the result of static casting d to an int is an rvalue expression
+
+    return 0;
+}
+```
+
+Explain why `x = 5` is valid but `5 = x` is not
+
+```cpp
+int main()
+{
+    int x{};
+
+    // Assignment requires the left operand to be a modifiable lvalue expression and the right operand to be an rvalue expression
+    x = 5; // valid: x is a modifiable lvalue expression and 5 is an rvalue expression
+    5 = x; // error: 5 is an rvalue expression and x is a modifiable lvalue expression
+
+    return 0;
+}
+```
+
+### L-value to r-value conversion
+
+Consider this case:
+
+```cpp
+int main()
+{
+    int x{ 1 };
+    int y{ 2 };
+
+    x = y; // y is a modifiable lvalue, not an rvalue, but this is legal
+
+    return 0;
+}
+```
+
+The answer is because lvalues will implicitly convert to rvalues, so an lvalue can be used wherever an rvalue is required.
+
+Now consider this snippet:
+
+```cpp
+int main()
+{
+    int x { 2 };
+
+    x = x + 1;
+
+    return 0;
+}
+```
+
+In this statement, the variable `x` is being used in two different contexts. On the left side of the assignment operator, `x` is an lvalue expression that evaluates to variable `x`. On the right side of the assignment operator, `x + 1` is an rvalue expression that evaluates to the value 3.
+
+### Conclusion
+
+A rule of thumb to identify lvalue and rvalue expressions:
+
+-   Lvalue expressions are those that evaluate to variables or other identifiable objects that persist beyond the end of the expression.
+-   Rvalue expressions are those that evaluate to literals or values returned by functions/operators that are discarded at the end of the expression.
+
+## 9.3 — Lvalue references
+
+In C++, a **reference** is an alias for an existing object. Once a reference has been defined, any operation on the reference is applied to the object being referenced.
+
+A reference is essentially identical to the object being referenced.
+
+This means we can use a reference to read or modify the object being referenced
+
+### Lvalue reference types
+
+An **lvalue reference** (commonly just called a reference since prior to C++11 there was only one type of reference) acts as an alias for an existing lvalue (such as a variable).
+
+To declare an lvalue reference type, we use an ampersand (&) in the type declaration:
+
+```cpp
+int      // a normal int type
+int&     // an lvalue reference to an int object
+double&  // an lvalue reference to a double object
+```
+
+### Lvalue reference variables
+
+An **lvalue reference variable** is a variable that acts as a reference to an lvalue (usually another variable).
+
+To create an lvalue reference variable, we simply define a variable with an lvalue reference type:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int x { 5 };    // x is a normal integer variable
+    int& ref { x }; // ref is an lvalue reference variable that can now be used as an alias for variable x
+
+    std::cout << x << '\n';  // print the value of x (5)
+    std::cout << ref << '\n'; // print the value of x via ref (5)
+
+    return 0;
+}
+```
+
+When defining a reference, place the ampersand next to the type (not the reference variable’s name).
+
+### Modifying values through an lvalue reference
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int x { 5 }; // normal integer variable
+    int& ref { x }; // ref is now an alias for variable x
+
+    std::cout << x << ref << '\n'; // print 55
+
+    x = 6; // x now has value 6
+
+    std::cout << x << ref << '\n'; // prints 66
+
+    ref = 7; // the object being referenced (x) now has value 7
+
+    std::cout << x << ref << '\n'; // prints 77
+
+    return 0;
+}
+```
+
+In the above example, `ref` is an alias for `x`, so we are able to change the value of `x` through either `x` or `ref`.
+
+### Initialization of lvalue references
+
+```cpp
+int main()
+{
+    int x { 5 };
+    int& ref { x }; // valid: lvalue reference bound to a modifiable lvalue
+
+    const int y { 5 };
+    int& invalidRef { y };  // invalid: can't bind to a non-modifiable lvalue
+    int& invalidRef2 { 0 }; // invalid: can't bind to an rvalue
+
+    return 0;
+}
+```
+
+When a reference is initialized with an object (or function), we say it is **bound** to that object (or function). The process by which such a reference is bound is called **reference binding**. The object (or function) being referenced is sometimes called the **referent**.
+
+Lvalue references must be bound to a modifiable lvalue.
+
+Lvalue references can’t be bound to non-modifiable lvalues or rvalues
+
+In most cases, the type of the reference must match the type of the referent (there are some exceptions to this rule that we’ll discuss when we get into inheritance):
+
+```cpp
+int main()
+{
+    int x { 5 };
+    int& ref { x }; // okay: reference to int is bound to int variable
+
+    double y { 6.0 };
+    int& invalidRef { y }; // invalid; reference to int cannot bind to double variable
+    double& invalidRef2 { x }; // invalid: reference to double cannot bind to int variable
+
+    return 0;
+}
+```
+
+### References can’t be reseated (changed to refer to another object)
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int x { 5 };
+    int y { 6 };
+
+    int& ref { x }; // ref is now an alias for x
+
+    ref = y; // assigns 6 (the value of y) to x (the object being referenced by ref)
+    // The above line does NOT change ref into a reference to variable y!
+
+    std::cout << x << '\n'; // user is expecting this to print 5
+
+    return 0;
+}
+```
+
+### Lvalue reference scope and duration
+
+Reference variables follow the same scoping and duration rules that normal variables do:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int x { 5 }; // normal integer
+    int& ref { x }; // reference to variable value
+
+     return 0;
+} // x and ref die here
+```
+
+### References and referents have independent lifetimes
+
+With one exception (that we’ll cover next lesson), the lifetime of a reference and the lifetime of its referent are independent. In other words, both of the following are true:
+
+-   A reference can be destroyed before the object it is referencing.
+-   The object being referenced can be destroyed before the reference.
+-   When a reference is destroyed before the referent, the referent is not impacted. The following program demonstrates this:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int x { 5 };
+
+    {
+        int& ref { x };   // ref is a reference to x
+        std::cout << ref << '\n'; // prints value of ref (5)
+    } // ref is destroyed here -- x is unaware of this
+
+    std::cout << x << '\n'; // prints value of x (5)
+
+    return 0;
+} // x destroyed here
+```
+
+### Dangling references
+
+When an object being referenced is destroyed before a reference to it, the reference is left referencing an object that no longer exists. Such a reference is called a dangling reference. Accessing a dangling reference leads to undefined behavior.
+
+Dangling references are fairly easy to avoid, but we’ll show a case where this can happen in practice in lesson 9.12 -- Return by reference and return by address.
+
+### References aren’t objects
+
+Because references aren’t objects, they can’t be used anywhere an object is required (e.g. you can’t have a reference to a reference, since an lvalue reference must reference an identifiable object). In cases where you need a reference that is an object or a reference that can be reseated, `std::reference_wrapper` (which we cover in lesson 16.3 -- Aggregation) provides a solution.
+
+C++ doesn’t support references to references:
+
+```cpp
+int var{};
+int& ref1{ var };  // an lvalue reference bound to var
+int& ref2{ ref1 }; // an lvalue reference bound to var
+```
+
+## 9.4 — Lvalue references to const
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    const int x { 5 };    // x is a non-modifiable lvalue
+    const int& ref { x }; // okay: ref is a an lvalue reference to a const value
+
+    std::cout << ref << '\n'; // okay: we can access the const object
+    ref = 6;                  // error: we can not modify an object through a const reference
+
+    return 0;
+}
+```
+
+### Initializing an lvalue reference to const with a modifiable lvalue
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int x { 5 };          // x is a modifiable lvalue
+    const int& ref { x }; // okay: we can bind a const reference to a modifiable lvalue
+
+    std::cout << ref << '\n'; // okay: we can access the object through our const reference
+    ref = 7;                  // error: we can not modify an object through a const reference
+
+    x = 6;                // okay: x is a modifiable lvalue, we can still modify it through the original identifier
+
+    return 0;
+}
+```
+
+Favor `lvalue references to const` over `lvalue references to non-const` unless you need to modify the object being referenced.
+
+### Initializing an lvalue reference to const with an rvalue
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    const int& ref { 5 }; // okay: 5 is an rvalue
+
+    std::cout << ref << '\n'; // prints 5
+
+    return 0;
+}
+```
+
+When this happens, a temporary object is created and initialized with the rvalue, and the reference to const is bound to that temporary object.
+
+A **temporary object** (also sometimes called an **anonymous object**) is an object that is created for temporary use (and then destroyed) within a single expression.
+
+### Const references bound to temporary objects extend the lifetime of the temporary object
+
+Temporary objects are normally destroyed at the end of the expression in which they are created.
+
+However, consider what would happen in the above example if the temporary object created to hold rvalue `5` was destroyed at the end of the expression that initializes ref. Reference `ref` would be left dangling (referencing an object that had been destroyed), and we’d get undefined behavior when we tried to access `ref`.
+
+To avoid dangling references in such cases, C++ has a special rule: When a const lvalue reference is bound to a temporary object, the lifetime of the temporary object is extended to match the lifetime of the reference.
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    const int& ref { 5 }; // The temporary object holding value 5 has its lifetime extended to match ref
+
+    std::cout << ref << '\n'; // Therefore, we can safely use it here
+
+    return 0;
+} // Both ref and the temporary object die here
+```
+
+#### Key insight
+
+Lvalue references can only bind to modifiable lvalues.
+
+Lvalue references to const can bind to modifiable lvalues, non-modifiable lvalues, and rvalues. This makes them a much more flexible type of reference.
+
+## 9.5 — Pass by lvalue reference
+
+in lesson 2.4 -- Introduction to function parameters and arguments we discussed pass by value, where an argument passed to a function is copied into the function’s parameter
+
+because fundamental types are cheap to copy, this isn’t a problem.
+
+### Some objects are expensive to copy
+
+Most of the types provided by the standard library (such as `std::string`) are `class types`. Class types are usually expensive to copy. Whenever possible, we want to avoid making unnecessary copies of objects that are expensive to copy, especially when we will destroy those copies almost immediately.
+
+```cpp
+#include <iostream>
+#include <string>
+
+void printValue(std::string y)
+{
+    std::cout << y << '\n';
+} // y is destroyed here
+
+int main()
+{
+    std::string x { "Hello, world!" }; // x is a std::string
+
+    printValue(x); // x is passed by value (copied) into parameter y (expensive)
+
+    return 0;
+}
+```
+
+### Pass by reference
+
+One way to avoid making an expensive copy of an argument when calling a function is to use `pass by reference` instead of `pass by value`. When using **pass by reference**, we declare a function parameter as a reference type (or const reference type) rather than as a normal type. When the function is called, each reference parameter is bound to the appropriate argument. Because the reference acts as an alias for the argument, no copy of the argument is made.
+
+```cpp
+#include <iostream>
+#include <string>
+
+void printValue(std::string& y) // type changed to std::string&
+{
+    std::cout << y << '\n';
+} // y is destroyed here
+
+int main()
+{
+    std::string x { "Hello, world!" };
+
+    printValue(x); // x is now passed by reference into reference parameter y (inexpensive)
+
+    return 0;
+}
+```
+
+Pass by reference allows us to pass arguments to a function without making copies of those arguments each time the function is called.
+
+### Pass by reference allows us to change the value of an argument
+
+Passing values by reference to non-const allows us to write functions that modify the value of arguments passed in.
+
+Pass by Value:
+
+```cpp
+#include <iostream>
+
+void addOne(int y) // y is a copy of x
+{
+    ++y; // this modifies the copy of x, not the actual object x
+}
+
+int main()
+{
+    int x { 5 };
+
+    std::cout << "value = " << x << '\n';
+
+    addOne(x);
+
+    std::cout << "value = " << x << '\n'; // x has not been modified
+
+    return 0;
+}
+```
+
+This program outputs:
+
+```
+value = 5
+value = 5
+```
+
+Pass by Reference:
+
+```cpp
+#include <iostream>
+
+void addOne(int& y) // y is bound to the actual object x
+{
+    ++y; // this modifies the actual object x
+}
+
+int main()
+{
+    int x { 5 };
+
+    std::cout << "value = " << x << '\n';
+
+    addOne(x);
+
+    std::cout << "value = " << x << '\n'; // x has been modified
+
+    return 0;
+}
+```
+
+This program outputs:
+
+```
+value = 5
+value = 6
+```
+
+### Pass by reference can only accept modifiable lvalue arguments
+
+Because a reference to a non-const value can only bind to a modifiable lvalue (essentially a non-const variable), this means that pass by reference only works with arguments that are modifiable lvalues.
+
+```cpp
+#include <iostream>
+
+void printValue(int& y) // y only accepts modifiable lvalues
+{
+    std::cout << y << '\n';
+}
+
+int main()
+{
+    int x { 5 };
+    printValue(x); // ok: x is a modifiable lvalue
+
+    const int z { 5 };
+    printValue(z); // error: z is a non-modifiable lvalue
+
+    printValue(5); // error: 5 is an rvalue
+
+    return 0;
+}
+```
+
+## 9.6 — Pass by const lvalue reference
+
+Favor passing by const reference over passing by non-const reference unless you have a specific reason to do otherwise (e.g. the function needs to change the value of an argument).
+
+```cpp
+#include <iostream>
+
+void printValue(const int& y) // y is now a const reference
+{
+    std::cout << y << '\n';
+}
+
+int main()
+{
+    int x { 5 };
+    printValue(x); // ok: x is a modifiable lvalue
+
+    const int z { 5 };
+    printValue(z); // ok: z is a non-modifiable lvalue
+
+    printValue(5); // ok: 5 is a literal rvalue
+
+    ++y; // not allowed: ref is const
+
+    return 0;
+}
+```
+
+### Mixing pass by value and pass by reference
+
+```cpp
+#include <string>
+
+void foo(int a, int& b, const std::string& c)
+{
+}
+
+int main()
+{
+    int x { 5 };
+    const std::string s { "Hello, world!" };
+
+    foo(5, x, s);
+
+    return 0;
+}
+```
+
+### When to pass by (const) reference
+
+As a rule of thumb, pass fundamental types by value, and class (or struct) types by const reference.
+
+-   Other common types to pass by value: enumerated types and `std::string_view`.
+-   Other common types to pass by (const) reference: `std::string`, `std::array`, and `std::vector`.
+
+### The cost of pass by value vs pass by reference (Advanced)
+
+Read on website
+
+### For function parameters, prefer std::string_view over const std::string& in most cases
+
+Prefer passing strings using std::string_view (by value) instead of const std::string&, unless your function calls other functions that require C-style strings or std::string parameters.
+
+### Why std::string_view parameters are more efficient than const std::string& (Advanced)
+
+Read on website
+
+## 9.7 — Introduction to pointers
+
+### The address-of operator (&)
+
+The **address-of operator** (&) returns the memory address of its operand. This is pretty straightforward:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int x{ 5 };
+    std::cout << x << '\n';  // print the value of variable x
+    std::cout << &x << '\n'; // print the memory address of variable x
+
+    return 0;
+}
+```
+
+In the above example, we use the address-of operator (&) to retrieve the address assigned to variable x and print that address to the console. Memory addresses are typically printed as hexadecimal values (we covered hex in lesson 4.16 -- Numeral systems (decimal, binary, hexadecimal, and octal)), often without the 0x prefix.
+
+For objects that use more than one byte of memory, address-of will **return the memory address of the first byte used by the object**.
+
+**Tip**
+
+The & symbol tends to cause confusion because it has different meanings depending on context:
+
+-   When following a type name, & denotes an lvalue reference: `int& ref`.
+-   When used in a unary context in an expression, & is the address-of operator: `std::cout << &x`.
+-   When used in a binary context in an expression, & is the Bitwise AND operator: `std::cout << x & y`.
+
+### The dereference operator (\*)
+
+The most useful thing we can do with an address is access the value stored at that address. The **dereference operator** (\*) (also occasionally called the indirection operator) returns the value at a given memory address as an lvalue:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int x{ 5 };
+    std::cout << x << '\n';  // print the value of variable x
+    std::cout << &x << '\n'; // print the memory address of variable x
+
+    std::cout << *(&x) << '\n'; // print the value at the memory address of variable x (parentheses not required, but make it easier to read)
+
+    return 0;
+}
+```
+
+**Key insight**
+Given a memory address, we can use the dereference operator (\*) to get the value at that address (as an lvalue).
+
+The address-of operator (&) and dereference operator (\*) work as opposites: address-of gets the address of an object, and dereference gets the object at an address.
+
+### Pointers
+
+A **pointer** is an object that holds a memory address (typically of another variable) as its value. This allows us to store the address of some other object to use later.
+
+Much like reference types are declared using an ampersand (&) character, pointer types are declared using an asterisk (\*):
+
+```cpp
+int;  // a normal int
+int&; // an lvalue reference to an int value
+
+int*; // a pointer to an int value (holds the address of an integer value)
+```
+
+To create a pointer variable, we simply define a variable with a pointer type:
+
+```cpp
+int main()
+{
+    int x { 5 };    // normal variable
+    int& ref { x }; // a reference to an integer (bound to x)
+
+    int* ptr;       // a pointer to an integer
+
+    return 0;
+}
+```
+
+should not declare multiple variables on a single line, if you do, the asterisk has to be included with each variable.
+
+```cpp
+int* ptr1, ptr2;   // incorrect: ptr1 is a pointer to an int, but ptr2 is just a plain int!
+int* ptr3, * ptr4; // correct: ptr3 and ptr4 are both pointers to an int
+```
+
+### Pointer initialization
+
+Like normal variables, pointers are not initialized by default. A pointer that has not been initialized is sometimes called a **wild pointer**. Wild pointers contain a garbage address, and dereferencing a wild pointer will result in undefined behavior. Because of this, **you should always initialize your pointers to a known value**.
+
+```cpp
+int main()
+{
+    int x{ 5 };
+
+    int* ptr;        // an uninitialized pointer (holds a garbage address)
+    int* ptr2{};     // a null pointer (we'll discuss these in the next lesson)
+    int* ptr3{ &x }; // a pointer initialized with the address of variable x
+
+    return 0;
+}
+```
+
+Much like the type of a reference has to match the type of object being referred to, the type of the pointer has to match the type of the object being pointed to:
+
+```cpp
+int main()
+{
+    int i{ 5 };
+    double d{ 7.0 };
+
+    int* iPtr{ &i };     // ok: a pointer to an int can point to an int object
+    int* iPtr2 { &d };   // not okay: a pointer to an int can't point to a double object
+    double* dPtr{ &d };  // ok: a pointer to a double can point to a double object
+    double* dPtr2{ &i }; // not okay: a pointer to a double can't point to an int object
+
+    return 0;
+}
+```
+
+With one exception that we’ll discuss next lesson, initializing a pointer with a literal value is disallowed:
+
+```cpp
+int* ptr{ 5 }; // not okay
+int* ptr{ 0x0012FF7C }; // not okay, 0x0012FF7C is treated as an integer literal
+```
+
+### Pointers and assignment
+
+We can use assignment with pointers in two different ways:
+
+1. To change what the pointer is pointing at (by assigning the pointer a new address)
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int x{ 5 };
+    int* ptr{ &x }; // ptr initialized to point at x
+
+    std::cout << *ptr << '\n'; // print the value at the address being pointed to (x's address)
+
+    int y{ 6 };
+    ptr = &y; // // change ptr to point at y
+
+    std::cout << *ptr << '\n'; // print the value at the address being pointed to (y's address)
+
+    return 0;
+}
+```
+
+2. To change the value being pointed at (by assigning the dereferenced pointer a new value)
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int x{ 5 };
+    int* ptr{ &x }; // initialize ptr with address of variable x
+
+    std::cout << x << '\n';    // print x's value
+    std::cout << *ptr << '\n'; // print the value at the address that ptr is holding (x's address)
+
+    *ptr = 6; // The object at the address held by ptr (x) assigned value 6 (note that ptr is dereferenced here)
+
+    std::cout << x << '\n';
+    std::cout << *ptr << '\n'; // print the value at the address that ptr is holding (x's address)
+
+    return 0;
+}
+```
+
+### Pointers behave much like lvalue references
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int x{ 5 };
+    int& ref { x };  // get a reference to x
+    int* ptr { &x }; // get a pointer to x
+
+    std::cout << x;
+    std::cout << ref;  // use the reference to print x's value (5)
+    std::cout << *ptr << '\n'; // use the pointer to print x's value (5)
+
+    ref = 6; // use the reference to change the value of x
+    std::cout << x;
+    std::cout << ref;  // use the reference to print x's value (6)
+    std::cout << *ptr << '\n'; // use the pointer to print x's value (6)
+
+    *ptr = 7; // use the pointer to change the value of x
+    std::cout << x;
+    std::cout << ref;  // use the reference to print x's value (7)
+    std::cout << *ptr << '\n'; // use the pointer to print x's value (7)
+
+    return 0;
+}
+```
+
+There are some other differences between pointers and references worth mentioning:
+
+-   References must be initialized, pointers are not required to be initialized (but should be).
+-   References are not objects, pointers are.
+-   References can not be reseated (changed to reference something else), pointers can change what they are pointing at.
+-   References must always be bound to an object, pointers can point to nothing (we’ll see an example of this in the next lesson).
+-   References are “safe” (outside of dangling references), pointers are inherently dangerous (we’ll also discuss this in the next lesson).
+
+### The address-of operator returns a pointer
+
+It’s worth noting that the address-of operator (&) doesn’t return the address of its operand as a literal. Instead, it returns a pointer containing the address of the operand, whose type is derived from the argument (e.g. taking the address of an `int` will return the address in an `int` pointer).
+
+```cpp
+#include <iostream>
+#include <typeinfo>
+
+int main()
+{
+	int x{ 4 };
+	std::cout << typeid(&x).name() << '\n'; // print the type of &x
+
+	return 0;
+}
+```
+
+On Visual Studio, this printed:
+
+```
+int *
+```
+
+### The size of pointers
+
+The size of a pointer is dependent upon the architecture the executable is compiled for -- a 32-bit executable uses 32-bit memory addresses -- consequently, a pointer on a 32-bit machine is 32 bits (4 bytes). With a 64-bit executable, a pointer would be 64 bits (8 bytes). Note that this is true regardless of the size of the object being pointed to:
+
+```cpp
+#include <iostream>
+
+int main() // assume a 32-bit application
+{
+    char* chPtr{};        // chars are 1 byte
+    int* iPtr{};          // ints are usually 4 bytes
+    long double* ldPtr{}; // long doubles are usually 8 or 12 bytes
+
+    std::cout << sizeof(chPtr) << '\n'; // prints 4
+    std::cout << sizeof(iPtr) << '\n';  // prints 4
+    std::cout << sizeof(ldPtr) << '\n'; // prints 4
+
+    return 0;
+}
+```
+
+The size of the pointer is always the same. This is because a pointer is just a memory address, and the number of bits needed to access a memory address is constant.
+
+### Dangling pointers
+
+Much like a dangling reference, a **dangling pointer** is a pointer that is holding the address of an object that is no longer valid (e.g. because it has been destroyed).
