@@ -5257,3 +5257,2355 @@ The size of the pointer is always the same. This is because a pointer is just a 
 ### Dangling pointers
 
 Much like a dangling reference, a **dangling pointer** is a pointer that is holding the address of an object that is no longer valid (e.g. because it has been destroyed).
+
+## 9.8 — Null pointers
+
+### Null pointers
+
+When a pointer is holding a null value, it means the pointer is not pointing at anything. Such a pointer is called a null pointer.
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int* ptr {}; // ptr is a null pointer, and is not holding an address
+
+    int x { 5 };
+    ptr = &x; // ptr now pointing at object x (no longer a null pointer)
+
+    std::cout << *ptr << '\n'; // print value of x through dereferenced ptr
+
+    return 0;
+}
+```
+
+### The nullptr keyword
+
+Much like the keywords `true` and `false` represent Boolean literal values, the `nullptr` keyword represents a null pointer literal. We can use `nullptr` to explicitly initialize or assign a pointer a null value.
+
+```cpp
+int main()
+{
+    int* ptr { nullptr }; // can use nullptr to initialize a pointer to be a null pointer
+
+    int value { 5 };
+    int* ptr2 { &value }; // ptr2 is a valid pointer
+    ptr2 = nullptr; // Can assign nullptr to make the pointer a null pointer
+
+    someFunction(nullptr); // we can also pass nullptr to a function that has a pointer parameter
+
+    return 0;
+}
+```
+
+### Dereferencing a null pointer results in undefined behavior
+
+Whenever you are using pointers, you’ll need to be extra careful that your code isn’t dereferencing null or dangling pointers, as this will cause undefined behavior (probably an application crash).
+
+### Checking for null pointers
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int x { 5 };
+    int* ptr { &x };
+
+    if (ptr == nullptr) // explicit test for equivalence
+        std::cout << "ptr is null\n";
+    else
+        std::cout << "ptr is non-null\n";
+
+    int* nullPtr {};
+    std::cout << "nullPtr is " << (nullPtr==nullptr ? "null\n" : "non-null\n"); // explicit test for equivalence
+
+    return 0;
+}
+```
+
+Result:
+
+```
+ptr is non-null
+nullPtr is null
+```
+
+pointers will also implicitly convert to Boolean values: a null pointer converts to Boolean value `false`, and a non-null pointer converts to Boolean value `true`. This allows us to skip explicitly testing for `nullptr` and just use the implicit conversion to Boolean to test whether a pointer is a null pointer. The following program is equivalent to the prior one:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int x { 5 };
+    int* ptr { &x };
+
+    // pointers convert to Boolean false if they are null, and Boolean true if they are non-null
+    if (ptr) // implicit conversion to Boolean
+        std::cout << "ptr is non-null\n";
+    else
+        std::cout << "ptr is null\n";
+
+    int* nullPtr {};
+    std::cout << "nullPtr is " << (nullPtr ? "non-null\n" : "null\n"); // implicit conversion to Boolean
+
+    return 0;
+}
+```
+
+Conditionals can only be used to differentiate null pointers from non-null pointers. There is no convenient way to determine whether a non-null pointer is pointing to a valid object or dangling (pointing to an invalid object).
+
+### Use nullptr to avoid dangling pointers
+
+A pointer should either hold the address of a valid object, or be set to nullptr. That way we only need to test pointers for null, and can assume any non-null pointer is valid.
+
+### Legacy null pointer literals: 0 and NULL
+
+Both `0` and `NULL` should be avoided in modern C++ (use `nullptr` instead). We discuss why in lesson 9.11 -- Pass by address (part 2).
+
+```cpp
+int main()
+{
+    float* ptr { 0 };  // ptr is now a null pointer (for example only, don't do this)
+
+    float* ptr2; // ptr2 is uninitialized
+    ptr2 = 0; // ptr2 is now a null pointer (for example only, don't do this)
+
+    return 0;
+}
+```
+
+```cpp
+#include <cstddef> // for NULL
+
+int main()
+{
+    double* ptr { NULL }; // ptr is a null pointer
+
+    double* ptr2; // ptr2 is uninitialized
+    ptr2 = NULL; // ptr2 is now a null pointer
+
+    return 0;
+}
+```
+
+### Favor references over pointers whenever possible
+
+## 9.9 — Pointers and const
+
+### Pointer to const value
+
+A **pointer to a const value** (sometimes called a `pointer to const` for short) is a (non-const) pointer that points to a constant value.
+
+To declare a pointer to a const value, use the `const` keyword **before the pointer’s data type**:
+
+```cpp
+int main()
+{
+    const int x { 5 }; // x is now const
+    int* ptr { &x };   // compile error: cannot convert from const int* to int*
+    const int* ptr { &x }; // okay: ptr is pointing to a "const int"
+
+    *ptr = 6; // not allowed: we can't change a const value
+
+    return 0;
+}
+```
+
+However, because a pointer to const is not const itself (it just points to a const value), we can change what the pointer is pointing at by assigning the pointer a new address:
+
+```cpp
+int main()
+{
+    const int x{ 5 };
+    const int* ptr { &x }; // ptr points to const int x
+
+    const int y{ 6 };
+    ptr = &y; // okay: ptr now points at const int y
+
+    return 0;
+}
+```
+
+Just like a reference to const, a pointer to const can point to non-const variables too. A pointer to const treats the value being pointed to as constant, regardless of whether the object at that address was initially defined as const or not:
+
+```cpp
+int main()
+{
+    int x{ 5 }; // non-const
+    const int* ptr { &x }; // ptr points to a "const int"
+
+    *ptr = 6;  // not allowed: ptr points to a "const int" so we can't change the value through ptr
+    x = 6; // allowed: the value is still non-const when accessed through non-const identifier x
+
+    return 0;
+}
+```
+
+### Const pointers
+
+We can also make a pointer itself constant. A **const pointer** is a pointer whose address can not be changed after initialization.
+
+To declare a const pointer, use the `const` keyword **after the asterisk** in the pointer declaration:
+
+```cpp
+int main()
+{
+    int x{ 5 };
+    int y{ 6 };
+
+    int* const ptr { &x }; // okay: the const pointer is initialized to the address of x
+    ptr = &y; // error: once initialized, a const pointer can not be changed.
+
+    return 0;
+}
+```
+
+However, because the value being pointed to is non-const, it is possible to change the value being pointed to via dereferencing the const pointer:
+
+```cpp
+int main()
+{
+    int x{ 5 };
+    int* const ptr { &x }; // ptr will always point to x
+
+    *ptr = 6; // okay: the value being pointed to is non-const
+
+    return 0;
+}
+```
+
+### Const pointer to a const value
+
+A const pointer to a const value can not have its address changed, nor can the value it is pointing to be changed through the pointer. It can only be dereferenced to get the value it is pointing at.
+
+```cpp
+int main()
+{
+    int value { 5 };
+    const int* const ptr { &value }; // a const pointer to a const value
+
+    return 0;
+}
+```
+
+### Pointer and const recap
+
+To summarize, you only need to remember 4 rules, and they are pretty logical:
+
+-   A non-const pointer can be assigned another address to change what it is pointing at.
+-   A const pointer always points to the same address, and this address can not be changed.
+-   A pointer to a non-const value can change the value it is pointing to. These can not point to a const value.
+-   A pointer to a const value treats the value as const when accessed through the pointer, and thus can not change the value it is pointing to. These can be pointed to const or non-const l-values (but not r-values, which don’t have an address).
+
+Keeping the declaration syntax straight can be a bit challenging:
+
+-   A `const` before the asterisk is associated with the type being pointed to. Therefore, this is a pointer to a const value, and the value cannot be modified through the pointer.
+-   A `const` after the asterisk is associated with the pointer itself. Therefore, this pointer cannot be assigned a new address.
+
+```cpp
+int main()
+{
+    int v{ 5 };
+
+    int* ptr0 { &v };             // points to an "int" but is not const itself, so this is a normal pointer.
+    const int* ptr1 { &v };       // points to a "const int" but is not const itself, so this is a pointer to a const value.
+    int* const ptr2 { &v };       // points to an "int" and is const itself, so this is a const pointer (to a non-const value).
+    const int* const ptr3 { &v }; // points to an "const int" and is const itself, so this is a const pointer to a const value.
+
+    // if the const is on the left side of the *, the const belongs to the value
+    // if the const is on the right side of the *, the const belongs to the pointer
+
+    return 0;
+}
+```
+
+## 9.10 — Pass by address
+
+In prior lessons, we’ve covered two different ways to pass an argument to a function: pass by value (2.4 -- Introduction to function parameters and arguments) and pass by reference (9.5 -- Pass by lvalue reference).
+
+Here’s a sample program that shows a `std::string` object being passed by value and by reference:
+
+```cpp
+#include <iostream>
+#include <string>
+
+void printByValue(std::string val) // The function parameter is a copy of str
+{
+    std::cout << val << '\n'; // print the value via the copy
+}
+
+void printByReference(const std::string& ref) // The function parameter is a reference that binds to str
+{
+    std::cout << ref << '\n'; // print the value via the reference
+}
+
+int main()
+{
+    std::string str{ "Hello, world!" };
+
+    printByValue(str); // pass str by value, makes a copy of str
+    printByReference(str); // pass str by reference, does not make a copy of str
+
+    return 0;
+}
+```
+
+When we pass argument `str` by value, the function parameter `val` receives a copy of the argument. Because the parameter is a copy of the argument, any changes to the `val` are made to the copy, not the original argument.
+
+When we pass argument `str` by reference, the reference parameter `ref` is bound to the actual argument. This avoids making a copy of the argument. Because our reference parameter is const, we are not allowed to change `ref`. But if `ref` were non-const, any changes we made to `ref` would change `str`.
+
+In both cases, the caller is providing the actual object (`str`) to be passed as an argument to the function call.
+
+### Pass by address
+
+With **pass by address**, instead of providing an object as an argument, the caller provides an object’s address (via a pointer). This pointer (holding the address of the object) is copied into a pointer parameter of the called function (which now also holds the address of the object). The function can then dereference that pointer to access the object whose address was passed.
+
+```cpp
+#include <iostream>
+#include <string>
+
+void printByValue(std::string val) // The function parameter is a copy of str
+{
+    std::cout << val << '\n'; // print the value via the copy
+}
+
+void printByReference(const std::string& ref) // The function parameter is a reference that binds to str
+{
+    std::cout << ref << '\n'; // print the value via the reference
+}
+
+void printByAddress(const std::string* ptr) // The function parameter is a pointer that holds the address of str
+{
+    std::cout << *ptr << '\n'; // print the value via the dereferenced pointer
+}
+
+int main()
+{
+    std::string str{ "Hello, world!" };
+
+    printByValue(str); // pass str by value, makes a copy of str
+    printByReference(str); // pass str by reference, does not make a copy of str
+    printByAddress(&str); // pass str by address, does not make a copy of str
+
+    return 0;
+}
+```
+
+### Pass by address does not make a copy of the object being pointed to
+
+### Pass by address allows the function to modify the argument’s value
+
+### Null checking
+
+```cpp
+#include <iostream>
+#include <cassert>
+
+void print(const int* ptr) // now a pointer to a const int
+{
+	assert(ptr); // fail the program in debug mode if a null pointer is passed (since this should never happen)
+
+	// (optionally) handle this as an error case in production mode so we don't crash if it does happen
+	if (!ptr)
+		return;
+
+	std::cout << *ptr << '\n';
+}
+
+int main()
+{
+	int x{ 5 };
+
+	print(&x);
+	print(nullptr);
+
+	return 0;
+}
+```
+
+### Prefer pass by (const) reference
+
+Pass by const reference has a few other advantages over pass by address.
+
+1. an object being passed by address must have an address, only lvalues can be passed by address (as rvalues don’t have addresses). Pass by const reference is more flexible, as it can accept lvalues and rvalues:
+
+```cpp
+#include <iostream>
+
+void printByValue(int val) // The function parameter is a copy of the argument
+{
+    std::cout << val << '\n'; // print the value via the copy
+}
+
+void printByReference(const int& ref) // The function parameter is a reference that binds to the argument
+{
+    std::cout << ref << '\n'; // print the value via the reference
+}
+
+void printByAddress(const int* ptr) // The function parameter is a pointer that holds the address of the argument
+{
+    std::cout << *ptr << '\n'; // print the value via the dereferenced pointer
+}
+
+int main()
+{
+    printByValue(5);     // valid (but makes a copy)
+    printByReference(5); // valid (because the parameter is a const reference)
+    printByAddress(&5);  // error: can't take address of r-value
+
+    return 0;
+}
+```
+
+2.  Second, the syntax for pass by reference is natural, as we can just pass in literals or objects. With pass by address, our code ends up littered with ampersands (&) and asterisks (\*)
+
+## 9.11 — Pass by address (part 2)
+
+### Pass by address for “optional” arguments
+
+```cpp
+#include <iostream>
+#include <string>
+
+void greet(std::string* name=nullptr)
+{
+    std::cout << "Hello ";
+    std::cout << (name ? *name : "guest") << '\n';
+}
+
+int main()
+{
+    greet(); // we don't know who the user is yet
+
+    std::string joe{ "Joe" };
+    greet(&joe); // we know the user is joe
+
+    return 0;
+}
+```
+
+However, in many cases, function overloading is a better alternative to achieve the same result:
+
+```cpp
+#include <iostream>
+#include <string>
+#include <string_view>
+
+void greet(std::string_view name)
+{
+    std::cout << "Hello " << name << '\n';
+}
+
+void greet()
+{
+    greet("guest");
+}
+
+int main()
+{
+    greet(); // we don't know who the user is yet
+
+    std::string joe{ "Joe" };
+    greet(joe); // we know the user is joe
+
+    return 0;
+}
+```
+
+### Changing what a pointer parameter points at
+
+When we pass an address to a function, that address is copied from the argument into the pointer parameter (which is fine, because copying an address is fast).
+
+So changing the address held by the pointer parameter had no impact on the address held by the argument
+
+So what if we want to allow a function to change what a pointer argument points to?
+
+### Pass by address… by reference?
+
+```cpp
+#include <iostream>
+
+void nullify(int*& refptr) // refptr is now a reference to a pointer
+{
+    refptr = nullptr; // Make the function parameter a null pointer
+}
+
+int main()
+{
+    int x{ 5 };
+    int* ptr{ &x }; // ptr points to x
+
+    std::cout << "ptr is " << (ptr ? "non-null\n" : "null\n");
+
+    nullify(ptr);
+
+    std::cout << "ptr is " << (ptr ? "non-null\n" : "null\n");
+    return 0;
+}
+```
+
+This program prints:
+
+```
+ptr is non-null
+ptr is null
+```
+
+Because references to pointers are fairly uncommon, it can be easy to mix up the syntax (is it `int*&` or `int&*`?). The good news is that if you do it backwards, the compiler will error because you can’t have a pointer to a reference (because pointers must hold the address of an object, and references aren’t objects). Then you can switch it around.
+
+### Why using 0 or NULL is no longer preferred (optional)
+
+### std::nullptr_t (optional)
+
+Since `nullptr` can be differentiated from integer values in function overloads, it must have a different type. So what type is `nullptr`? The answer is that `nullptr` has type `std::nullptr_t` (defined in header \<cstddef\>). `std::nullptr_t` can only hold one value: `nullptr`!
+
+### There is only pass by value
+
+Now that you understand the basic differences between passing by reference, address, and value, let’s get reductionist for a moment. :)
+
+While the compiler can often optimize references away entirely, there are cases where this is not possible and a reference is actually needed. References are normally implemented by the compiler using pointers. This means that behind the scenes, pass by reference is essentially just a pass by address (with access to the reference doing an implicit dereference).
+
+And in the previous lesson, we mentioned that pass by address just copies an address from the caller to the called function -- which is just passing an address by value.
+
+Therefore, we can conclude that C++ really passes everything by value! The properties of pass by address (and reference) come solely from the fact that we can dereference the passed address to change the argument, which we can not do with a normal value parameter!
+
+## 9.12 — Return by reference and return by address
+
+In previous lessons, we discussed that when passing an argument by value, a copy of the argument is made into the function parameter. For fundamental types (which are cheap to copy), this is fine. But copying is typically expensive for class types (such as `std::string`). We can avoid making an expensive copy by utilizing passing by (const) reference (or pass by address) instead.
+
+We encounter a similar situation when returning by value: a copy of the return value is passed back to the caller. If the return type of the function is a class type, this can be expensive.
+
+```cpp
+std::string returnByValue(); // returns a copy of a std::string (expensive)
+```
+
+### Return by reference
+
+**Return by reference** returns a reference that is bound to the object being returned, which avoids making a copy of the return value. To return by reference, we simply define the return value of the function to be a reference type:
+
+```cpp
+std::string&       returnByReference(); // returns a reference to an existing std::string (cheap)
+const std::string& returnByReferenceToConst(); // returns a const reference to an existing std::string (cheap)
+```
+
+### The object being returned by reference must exist after the function returns
+
+Objects returned by reference must live beyond the scope of the function returning the reference, or a dangling reference will result. **Never return a local variable or temporary by reference.**
+
+```cpp
+#include <iostream>
+#include <string>
+
+const std::string& getProgramName()
+{
+    const std::string programName { "Calculator" }; // now a non-static local variable, destroyed when function ends
+
+    return programName;
+}
+
+const std::string& getProgramNameStatic() // returns a const reference
+{
+    static const std::string s_programName { "Calculator" }; // has static duration, destroyed at end of program
+
+    return s_programName;
+}
+
+int main()
+{
+    std::cout << "This program is named " << getProgramName(); // undefined behavior
+    std::cout << "This program is named " << getProgramName(); // OK, static variable still alive here
+    return 0;
+}
+```
+
+### Lifetime extension doesn’t work across function boundaries
+
+Reference lifetime extension does not work across function boundaries.
+
+Let’s take a look at an example where we return a temporary by reference:
+
+```cpp
+#include <iostream>
+
+const int& returnByConstReference()
+{
+    return 5; // returns const reference to temporary object
+}
+
+int main()
+{
+    const int &ref { returnByConstReference() };
+
+    std::cout << ref; // undefined behavior
+
+    return 0;
+}
+```
+
+In the above program, `returnByConstReference()` is returning an integer literal, but the return type of the function is `const int&`. This results in the creation of a temporary reference bound to a temporary object holding value 5. This temporary reference to a temporary object is then returned. The temporary object then goes out of scope, leaving the reference dangling.
+
+By the time the return value is bound to another const reference (in `main()`), it is too late to extend the lifetime of the temporary object -- as it has already been destroyed. Thus `ref` is bound to a dangling reference, and use of the value of `ref` will result in undefined behavior.
+
+### Don’t return non-const local static variables by reference
+
+```cpp
+#include <iostream>
+#include <string>
+
+const int& getNextId()
+{
+    static int s_x{ 0 }; // note: variable is non-const
+    ++s_x; // generate the next id
+    return s_x; // and return a reference to it
+}
+
+int main()
+{
+    const int& id1 { getNextId() }; // id1 is a reference
+    const int& id2 { getNextId() }; // id2 is a reference
+
+    std::cout << id1 << id2 << '\n';
+
+    return 0;
+}
+```
+
+Result may be what not wanted:
+
+```
+22
+```
+
+### Assigning/initializing a normal variable with a returned reference makes a copy
+
+If a function returns a reference, and that reference is used to initialize or assign to a non-reference variable, the return value will be copied (as if it had been returned by value).
+
+```cpp
+#include <iostream>
+#include <string>
+
+const int& getNextId()
+{
+    static int s_x{ 0 };
+    ++s_x;
+    return s_x;
+}
+
+int main()
+{
+    const int id1 { getNextId() }; // id1 is a normal variable now and receives a copy of the value returned by reference from getNextId()
+    const int id2 { getNextId() }; // id2 is a normal variable now and receives a copy of the value returned by reference from getNextId()
+
+    std::cout << id1 << id2 << '\n';
+
+    return 0;
+}
+```
+
+Result:
+
+```
+12
+```
+
+Of course, this also defeats the purpose of returning a value by reference.
+
+### It’s okay to return reference parameters by reference
+
+```cpp
+#include <iostream>
+#include <string>
+
+// Takes two std::string objects, returns the one that comes first alphabetically
+const std::string& firstAlphabetical(const std::string& a, const std::string& b)
+{
+	return (a < b) ? a : b; // We can use operator< on std::string to determine which comes first alphabetically
+}
+
+int main()
+{
+	std::string hello { "Hello" };
+	std::string world { "World" };
+
+	std::cout << firstAlphabetical(hello, world) << '\n';
+
+	return 0;
+}
+```
+
+### The caller can modify values through the reference
+
+### Return by address
+
+**Return by address** works almost identically to return by reference, except a pointer to an object is returned instead of a reference to an object. Return by address has the same primary caveat as return by reference -- the object being returned by address must outlive the scope of the function returning the address, otherwise the caller will receive a dangling pointer.
+
+The major advantage of return by address over return by reference is that we can have the function return `nullptr` if there is no valid object to return. For example, let’s say we have a list of students that we want to search. If we find the student we are looking for in the list, we can return a pointer to the object representing the matching student. If we don’t find any students matching, we can return `nullptr` to indicate a matching student object was not found.
+
+The major disadvantage of return by address is that the caller has to remember to do a `nullptr` check before dereferencing the return value, otherwise a null pointer dereference may occur and undefined behavior will result. Because of this danger, return by reference should be preferred over return by address unless the ability to return “no object” is needed.
+
+Prefer return by reference over return by address unless the ability to return “no object” (using `nullptr`) is important.
+
+## 9.13 — In and out parameters
+
+## 9.14 — Type deduction with pointers, references, and const
+
+# Chapter 10: Compound Types: Enums and Structs
+
+## 10.1 — Introduction to program-defined (user-defined) types
+
+by allowing us to create entirely new, custom types for use in our programs! Such types are often called user-defined types (though we think the term program-defined types is better -- we’ll discuss the difference later in this lesson). C++ has two categories of compound types that allow for this: the enumerated types (including unscoped and scoped enumerations), and the class types (including structs, classes, and unions).
+
+### Defining program-defined types
+
+```cpp
+// Define a program-defined type named Fraction so the compiler understands what a Fraction is
+// (we'll explain what a struct is and how to use them later in this chapter)
+// This only defines what a Fraction type looks like, it doesn't create one
+struct Fraction
+{
+	int numerator {};
+	int denominator {};
+};
+
+// Now we can make use of our Fraction type
+int main()
+{
+	Fraction f{ 3, 4 }; // this actually instantiates a Fraction object named f
+
+	return 0;
+}
+```
+
+Don’t forget to end your type definitions with a semicolon, otherwise the compiler will typically error on the next line of code.
+
+### Naming program-defined types
+
+Name your program-defined types starting with a capital letter and do not use a suffix.
+
+### Using program-defined types throughout a multi-file program
+
+Every code file that uses a program-defined type needs to see the full type definition before it is used. A forward declaration is not sufficient. This is required so that the compiler knows how much memory to allocate for objects of that type.
+
+A program-defined type used in only one code file should be defined in that code file as close to the first point of use as possible.
+
+A program-defined type used in multiple code files should be defined in a header file with the same name as the program-defined type and then #included into each code file as needed.
+
+```cpp
+#ifndef FRACTION_H
+#define FRACTION_H
+
+// Define a new type named Fraction
+// This only defines what a Fraction looks like, it doesn't create one
+// Note that this is a full definition, not a forward declaration
+struct Fraction
+{
+	int numerator {};
+	int denominator {};
+};
+
+#endif
+```
+
+### Type definitions are partially exempt from the one-definition rule (ODR)
+
+There are two caveats that are worth knowing about. First, you can still only have one type definition per code file (this usually isn’t a problem since header guards will prevent this). Second, all of the type definitions for a given type must be identical, otherwise undefined behavior will result.
+
+### Nomenclature: user-defined types vs program-defined types
+
+| Type            | Meaning                                                                                                                                                        | Examples                                  |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| Fundamental     | A type built into the core C++ language                                                                                                                        | int, std::nullptr_t                       |
+| Compound        | A type built from fundamental types                                                                                                                            | int&amp;, double\*, std::string, Fraction |
+| User-defined    | A class type or enumerated type(Includes those defined in the standard library or implementation)(In casual use, typically used to mean program-defined types) | std::string, Fraction                     |
+| Program-defined | A class type or enumerated type(Excludes those defined in standard library or implementation)                                                                  | Fraction                                  |
+
+## 10.2 — Unscoped enumerations
+
+### Enumerations
+
+An **enumeration** (also called an **enumerated type** or an **enum**) is a compound data type where every possible value is defined as a symbolic constant (called an **enumerator**).
+
+C++ supports two kinds of enumerations: unscoped enumerations (which we’ll cover now) and scoped enumerations (which we’ll cover later in this chapter).
+
+### Unscoped enumerations
+
+```cpp
+// Define a new unscoped enumeration named Color
+enum Color
+{
+    // Here are the enumerators
+    // These symbolic constants define all the possible values this type can hold
+    // Each enumerator is separated by a comma, not a semicolon
+    red,
+    green,
+    blue, // trailing comma optional but recommended
+}; // the enum definition must end with a semicolon
+
+int main()
+{
+    // Define a few variables of enumerated type Color
+    Color apple { red };   // my apple is red
+    Color shirt { green }; // my shirt is green
+    Color cup { blue };    // my cup is blue
+
+    Color socks { white }; // error: white is not an enumerator of Color
+    Color hat { 2 };       // error: 2 is not an enumerator of Color
+
+    return 0;
+}
+```
+
+### Naming enumerations and enumerators
+
+Enumerations don’t have to be named, but unnamed enumerations should be avoided in modern C++.
+
+Name your enumerated types starting with a capital letter. Name your enumerators starting with a lower case letter.
+
+### Enumerated types are distinct types
+
+Each enumerated type you create is considered to be a distinct type, meaning the compiler can distinguish it from other types (unlike typedefs or type aliases, which are considered non-distinct from the types they are aliasing).
+
+Because enumerated types are distinct, enumerators defined as part of one enumerated type can’t be used with objects of another enumerated type:
+
+```cpp
+enum Pet
+{
+    cat,
+    dog,
+    pig,
+    whale,
+};
+
+enum Color
+{
+    black,
+    red,
+    blue,
+};
+
+int main()
+{
+    Pet myPet { black }; // compile error: black is not an enumerator of Pet
+    Color shirt { pig }; // compile error: pig is not an enumerator of Color
+
+    return 0;
+}
+```
+
+### Putting enumerations to use
+
+Because enumerations are small and inexpensive to copy, it is fine to pass (and return) them by value.
+
+### The scope of unscoped enumerations
+
+Unscoped enumerations are named such because they put their enumerator names into the same scope as the enumeration definition itself (as opposed to creating a new scope region like a namespace does).
+
+```cpp
+enum Color // this enum is defined in the global namespace
+{
+    red, // so red is put into the global namespace
+    green,
+    blue,
+};
+
+int main()
+{
+    Color apple { red }; // my apple is red
+
+    return 0;
+}
+```
+
+The `Color` enumeration is defined in the global scope. Therefore, all the enumeration names (`red`, `green`, and `blue`) also go into the global scope. This pollutes the global scope and significantly raises the chance of naming collisions.
+
+```cpp
+enum Color
+{
+    red,
+    green,
+    blue, // blue is put into the global namespace
+};
+
+enum Feeling
+{
+    happy,
+    tired,
+    blue, // error: naming collision with the above blue
+};
+
+int main()
+{
+    Color apple { red }; // my apple is red
+    Feeling me { happy }; // I'm happy right now (even though my program doesn't compile)
+
+    return 0;
+}
+```
+
+Unscoped enumerations also provide a named scope region for their enumerators (much like a namespace acts as a named scope region for the names declared within). This means we can access the enumerators of an unscoped enumeration as follows:
+
+```cpp
+enum Color
+{
+    red,
+    green,
+    blue, // blue is put into the global namespace
+};
+
+int main()
+{
+    Color apple { red }; // okay, accessing enumerator from global namespace
+    Color raspberry { Color::red }; // also okay, accessing enumerator from scope of Color
+
+    return 0;
+}
+```
+
+Most often, unscoped enumerators are accessed without using the scope resolution operator.
+
+### Avoiding enumerator naming collisions
+
+```cpp
+enum Color
+{
+    color_red,
+    color_blue,
+    color_green,
+};
+
+enum Feeling
+{
+    feeling_happy,
+    feeling_tired,
+    feeling_blue, // no longer has a naming collision with color_blue
+};
+
+int main()
+{
+    Color paint { color_blue };
+    Feeling me { feeling_blue };
+
+    return 0;
+}
+```
+
+```cpp
+namespace Color
+{
+    // The names Color, red, blue, and green are defined inside namespace Color
+    enum Color
+    {
+        red,
+        green,
+        blue,
+    };
+}
+
+namespace Feeling
+{
+    enum Feeling
+    {
+        happy,
+        tired,
+        blue, // Feeling::blue doesn't collide with Color::blue
+    };
+}
+
+int main()
+{
+    Color::Color paint{ Color::blue };
+    Feeling::Feeling me{ Feeling::blue };
+
+    return 0;
+}
+```
+
+Prefer putting your enumerations inside a named scope region (such as a namespace or class) so the enumerators don’t pollute the global namespace.
+
+### Comparing against enumerators
+
+```cpp
+#include <iostream>
+
+enum Color
+{
+    red,
+    green,
+    blue,
+};
+
+int main()
+{
+    Color shirt{ blue };
+
+    if (shirt == blue) // if the shirt is blue
+        std::cout << "Your shirt is blue!";
+    else
+        std::cout << "Your shirt is not blue!";
+
+    return 0;
+}
+```
+
+## 10.3 — Unscoped enumeration input and output
+
+In the prior lesson (10.2 -- Unscoped enumerations), we mentioned that enumerators are symbolic constants. What we didn’t tell you then is that enumerators are **integral** symbolic constants. As a result, enumerated types actually hold an integral value.
+
+This is similar to the case with chars (4.11 -- Chars). Consider:
+
+```cpp
+char ch { 'A' };
+```
+
+A char is really just a 1-byte integral value, and the character 'A' gets converted to an integral value (in this case, 65) and stored.
+
+When we define an enumerator, each enumerator is automatically assigned an integer value based on its position in the enumerator list. By default, the first enumerator is assigned the integral value 0, and each subsequent enumerator has a value one greater than the previous enumerator:
+
+```cpp
+enum Color
+{
+    black, // assigned 0
+    red, // assigned 1
+    blue, // assigned 2
+    green, // assigned 3
+    white, // assigned 4
+    cyan, // assigned 5
+    yellow, // assigned 6
+    magenta, // assigned 7
+};
+
+int main()
+{
+    Color shirt{ blue }; // This actually stores the integral value 2
+
+    return 0;
+}
+```
+
+It is possible to explicitly define the value of enumerators. These integral values can be positive or negative, and can share the same value as other enumerators. Any non-defined enumerators are given a value one greater than the previous enumerator.
+
+```cpp
+enum Animal
+{
+    cat = -3,
+    dog,         // assigned -2
+    pig,         // assigned -1
+    horse = 5,
+    giraffe = 5, // shares same value as horse
+    chicken,      // assigned 6
+};
+```
+
+Avoid assigning explicit values to your enumerators unless you have a compelling reason to do so.
+
+### Unscoped enumerations will implicitly convert to integral values
+
+```cpp
+#include <iostream>
+
+enum Color
+{
+    black, // assigned 0
+    red, // assigned 1
+    blue, // assigned 2
+    green, // assigned 3
+    white, // assigned 4
+    cyan, // assigned 5
+    yellow, // assigned 6
+    magenta, // assigned 7
+};
+
+int main()
+{
+    Color shirt{ blue };
+
+    std::cout << "Your shirt is " << shirt << '\n'; // what does this do?
+
+    return 0;
+}
+```
+
+Since enumerated types hold integral values, as you might expect, this prints:
+
+```
+Your shirt is 2
+```
+
+When an enumerated type is used in a function call or with an operator, the compiler will first try to find a function or operator that matches the enumerated type. For example, when the compiler tries to compile `std::cout << shirt`, the compiler will first look to see if `operator<<` knows how to print an object of type `Color` (because `shirt` is of type `Color`) to `std::cout`. It doesn’t.
+
+If the compiler can’t find a match, the compiler will then implicitly convert an unscoped enumeration or enumerator to its corresponding integer value. Because `std::cout` does know how to print an integral value, the value in `shirt` gets converted to an integer and printed as integer value `2`.
+
+### Printing enumerator names
+
+```cpp
+#include <iostream>
+#include <string>
+#include <string_view> // C++17
+
+enum Color
+{
+    black,
+    red,
+    blue,
+};
+
+
+// We'll show a better version of this for C++17 below
+std::string getColor(Color color)
+{
+    switch (color)
+    {
+    case black: return "black";
+    case red:   return "red";
+    case blue:  return "blue";
+    default:    return "???";
+    }
+}
+
+constexpr std::string_view getColor(Color color) // C++17
+{
+    switch (color)
+    {
+    case black: return "black";
+    case red:   return "red";
+    case blue:  return "blue";
+    default:    return "???";
+    }
+}
+
+int main()
+{
+    Color shirt { blue };
+
+    std::cout << "Your shirt is " << getColor(shirt) << '\n';
+
+    return 0;
+}
+```
+
+Related content: Constexpr return types are covered in lesson 6.14 -- Constexpr and consteval functions.
+
+### Teaching operator<< how to print an enumerator
+
+```cpp
+#include <iostream>
+
+enum Color
+{
+	black,
+	red,
+	blue,
+};
+
+// Teach operator<< how to print a Color
+// Consider this magic for now since we haven't explained any of the concepts it uses yet
+// std::ostream is the type of std::cout
+// The return type and parameter type are references (to prevent copies from being made)!
+std::ostream& operator<<(std::ostream& out, Color color)
+{
+	switch (color)
+	{
+	case black: return out << "black";
+	case red:   return out << "red";
+	case blue:  return out << "blue";
+	default:    return out << "???";
+	}
+}
+
+int main()
+{
+	Color shirt{ blue };
+	std::cout << "Your shirt is " << shirt << '\n'; // it works!
+
+	return 0;
+}
+```
+
+This prints:
+
+```
+Your shirt is blue
+```
+
+When we try to print shirt using `std::cout` and `operator<<`, the compiler will see that we’ve overloaded `operator<<` to work with objects of type `Color`. This overloaded `operator<<` function is then called with `std::cout` as the out parameter, and our shirt as parameter `color`. Since out is a reference to `std::cout`, a statement such as `out << "blue"` is really just printing `"blue"` to `std::cout`.
+
+We cover overloading the I/O operators in lesson 14.4 -- Overloading the I/O operators. For now, you can copy this code and replace Color with your own enumerated type.
+
+### Enumeration size and underlying type (base)
+
+The enumerators of an enumeration are integral constants. The specific integral type used to represent enumerators is called the **underlying type** (or **base**).
+
+For unscoped enumerators, the C++ standard does not specify which specific integral type should be used as the underlying type. Most compilers will use type int as the underlying type (meaning an unscoped enum will be the same size as an int), unless a larger type is required to store the enumerator values.
+
+It is possible to specify a different underlying type. For example, if you are working in some bandwidth-sensitive context (e.g. sending data over a network) you may want to specify a smaller type:
+
+```cpp
+#include <cstdint>  // for std::int8_t
+#include <iostream>
+
+// Use an 8-bit integer as the enum underlying type
+enum Color : std::int8_t
+{
+    black,
+    red,
+    blue,
+};
+
+int main()
+{
+    Color c{ black };
+    std::cout << sizeof(c) << '\n'; // prints 1 (byte)
+
+    return 0;
+}
+```
+
+Because `std::int8_t` and `std::uint8_t` are usually type aliases for char types, using either of these types as the enum base will most likely cause the enumerators to print as char values rather than int values.
+
+### Integer to unscoped enumerator conversion
+
+While the compiler will implicitly convert unscoped enumerators to an integer, it **will not** implicitly convert an integer to an unscoped enumerator. The following will produce a compiler error:
+
+```cpp
+enum Pet // no specified base
+{
+    cat, // assigned 0
+    dog, // assigned 1
+    pig, // assigned 2
+    whale, // assigned 3
+};
+
+int main()
+{
+    Pet pet { 2 }; // compile error: integer value 2 won't implicitly convert to a Pet
+    pet = 3;       // compile error: integer value 3 won't implicitly convert to a Pet
+
+    return 0;
+}
+```
+
+There are two ways to work around this.
+
+First, you can force the compiler to convert an integer to an unscoped enumerator using `static_cast`:
+
+```cpp
+enum Pet // no specified base
+{
+    cat, // assigned 0
+    dog, // assigned 1
+    pig, // assigned 2
+    whale, // assigned 3
+};
+
+int main()
+{
+    Pet pet { static_cast<Pet>(2) }; // convert integer 2 to a Pet
+    pet = static_cast<Pet>(3);       // our pig evolved into a whale!
+
+    return 0;
+}
+```
+
+Second, in C++17, if an unscoped enumeration has a specified base, then the compiler will allow you to list initialize an unscoped enumeration using an integral value:
+
+```cpp
+enum Pet: int // we've specified a base
+{
+    cat, // assigned 0
+    dog, // assigned 1
+    pig, // assigned 2
+    whale, // assigned 3
+};
+
+int main()
+{
+    Pet pet1 { 2 }; // ok: can brace initialize with integer
+    Pet pet2 (2);   // compile error: cannot direct initialize with integer
+    Pet pet3 = 2;   // compile error: cannot copy initialize with integer
+
+    pet1 = 3;       // compile error: cannot assign with integer
+
+    return 0;
+}
+```
+
+### Unscoped enumerator input
+
+Because Pet is a program-defined type, the language doesn’t know how to input a Pet using `std::cin`:
+
+```cpp
+#include <iostream>
+
+enum Pet
+{
+    cat, // assigned 0
+    dog, // assigned 1
+    pig, // assigned 2
+    whale, // assigned 3
+};
+
+int main()
+{
+    Pet pet { pig };
+    std::cin >> pet; // compile error, std::cin doesn't know how to input a Pet
+
+    return 0;
+}
+```
+
+To work around this, we can read in an integer, and use `static_cast` to convert the integer to an enumerator of the appropriate enumerated type:
+
+```cpp
+#include <iostream>
+
+enum Pet
+{
+    cat, // assigned 0
+    dog, // assigned 1
+    pig, // assigned 2
+    whale, // assigned 3
+};
+
+int main()
+{
+    std::cout << "Enter a pet (0=cat, 1=dog, 2=pig, 3=whale): ";
+
+    int input{};
+    std::cin >> input; // input an integer
+
+    Pet pet{ static_cast<Pet>(input) }; // static_cast our integer to a Pet
+
+    return 0;
+}
+```
+
+Similar to how we were able to teach `operator<<` to output an enum type above, we can also teach `operator>>` how to input an enum type:
+
+```cpp
+#include <iostream>
+
+enum Pet
+{
+    cat, // assigned 0
+    dog, // assigned 1
+    pig, // assigned 2
+    whale, // assigned 3
+};
+
+// Consider this magic for now
+// We pass pet by reference so we can have the function modify its value
+std::istream& operator>> (std::istream& in, Pet& pet)
+{
+    int input{};
+    in >> input; // input an integer
+
+    pet = static_cast<Pet>(input);
+    return in;
+}
+
+int main()
+{
+    std::cout << "Enter a pet (0=cat, 1=dog, 2=pig, 3=whale): ";
+
+    Pet pet{};
+    std::cin >> pet; // input our pet using std::cin
+
+    std::cout << pet << '\n'; // prove that it worked
+
+    return 0;
+}
+```
+
+## 10.4 — Scoped enumerations (enum classes)
+
+### Scoped enumerations
+
+Scoped enumerations work similarly to unscoped enumerations (10.2 -- Unscoped enumerations), but have two primary differences:
+
+-   They are strongly typed (they won’t implicitly convert to integers)
+-   strongly scoped (the enumerators are only placed into the scope region of the enumeration).
+
+```cpp
+#include <iostream>
+int main()
+{
+    enum class Color // "enum class" defines this as a scoped enumeration rather than an unscoped enumeration
+    {
+        red, // red is considered part of Color's scope region
+        blue,
+    };
+
+    enum class Fruit
+    {
+        banana, // banana is considered part of Fruit's scope region
+        apple,
+    };
+
+    Color color { Color::red }; // note: red is not directly accessible, we have to use Color::red
+    Fruit fruit { Fruit::banana }; // note: banana is not directly accessible, we have to use Fruit::banana
+
+    if (color == fruit) // compile error: the compiler doesn't know how to compare different types Color and Fruit
+        std::cout << "color and fruit are equal\n";
+    else
+        std::cout << "color and fruit are not equal\n";
+
+    return 0;
+}
+```
+
+### Scoped enumerations define their own scope regions
+
+Unlike unscoped enumerations, which place their enumerators in the same scope as the enumeration itself, scoped enumerations place their enumerators only in the scope region of the enumeration. In other words, scoped enumerations act like a namespace for their enumerators. This built-in namespacing helps reduce global namespace pollution and the potential for name conflicts when scoped enumerations are used in the global scope.
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    enum class Color // "enum class" defines this as a scoped enum rather than an unscoped enum
+    {
+        red, // red is considered part of Color's scope region
+        blue,
+    };
+
+    std::cout << red << '\n';        // compile error: red not defined in this scope region
+    std::cout << Color::red << '\n'; // compile error: std::cout doesn't know how to print this (will not implicitly convert to int)
+
+    Color color { Color::blue }; // okay
+
+    return 0;
+}
+```
+
+Because scoped enumerations offer their own implicit namespacing for enumerators, there’s no need to put scoped enumerations inside another scope region (such as a namespace), unless there’s some other compelling reason to do so, as it would be redundant.
+
+### Scoped enumerations don’t implicitly convert to integers
+
+There are occasionally cases where it is useful to be able to treat a scoped enumerator as an integral value. In these cases, you can explicitly convert a scoped enumerator to an integer by using a `static_cast`. A better choice in C++23 is to use s`td::to_underlying()` (defined in the `<utility>` header), which converts an enumerator to a value of the underlying type of the enumeration.
+
+```cpp
+#include <iostream>
+#include <utility> // for std::to_underlying() (C++23)
+
+int main()
+{
+    enum class Color
+    {
+        red,
+        blue,
+    };
+
+    Color color { Color::blue };
+
+    std::cout << color << '\n'; // won't work, because there's no implicit conversion to int
+    std::cout << static_cast<int>(color) << '\n';   // explicit conversion to int, will print 1
+    std::cout << std::to_underlying(color) << '\n'; // convert to underlying type, will print 1 (C++23)
+
+    return 0;
+}
+```
+
+### Easing the conversion of scoped enumerators to integers (advanced)
+
+If you find yourself in the situation where it would be useful to make conversion of scoped enumerators to integers easier, a useful hack is to overload the unary `operator+` to perform this conversion. We haven’t explained how this works yet, so consider it magic for now:
+
+```cpp
+#include <iostream>
+#include <type_traits> // for std::underlying_type_t
+
+enum class Animals
+{
+    chicken, // 0
+    dog, // 1
+    cat, // 2
+    elephant, // 3
+    duck, // 4
+    snake, // 5
+
+    maxAnimals,
+};
+
+// Overload the unary + operator to convert Animals to the underlying type
+// adapted from https://stackoverflow.com/a/42198760, thanks to Pixelchemist for the idea
+constexpr auto operator+(Animals a) noexcept
+{
+    return static_cast<std::underlying_type_t<Animals>>(a);
+}
+
+int main()
+{
+    std::cout << +Animals::elephant << '\n'; // convert Animals::elephant to an integer using unary operator+
+
+    return 0;
+}
+```
+
+### using enum statements (C++20)
+
+```cpp
+#include <iostream>
+#include <string_view>
+
+enum class Color
+{
+    black,
+    red,
+    blue,
+};
+
+constexpr std::string_view getColor(Color color)
+{
+    using enum Color; // bring all Color enumerators into current scope (C++20)
+    // We can now access the enumerators of Color without using a Color:: prefix
+
+    switch (color)
+    {
+    case black: return "black"; // note: black instead of Color::black
+    case red:   return "red";
+    case blue:  return "blue";
+    default:    return "???";
+    }
+}
+
+int main()
+{
+    Color shirt{ Color::blue };
+
+    std::cout << "Your shirt is " << getColor(shirt) << '\n';
+
+    return 0;
+}
+```
+
+## 10.5 — Introduction to structs, members, and member selection
+
+### Defining structs
+
+```cpp
+struct Employee
+{
+    int id {};
+    int age {};
+    double wage {};
+};
+```
+
+The variables that are part of the struct are called **data members** (or **member variables**).
+
+In C++, a **member** is a variable, function, or type that belongs to a struct (or class). All members must be declared within the struct (or class) definition.
+
+We’ll use the term member a lot in future lessons, so make sure you remember what it means.
+
+### Defining struct objects
+
+```cpp
+Employee joe {}; // create an Employee struct for Joe
+Employee frank {}; // create an Employee struct for Frank
+```
+
+### Accessing members
+
+To access a specific member variable, we use the **member selection operator** (`operator.`)
+
+```cpp
+#include <iostream>
+
+struct Employee
+{
+    int id {};
+    int age {};
+    double wage {};
+};
+
+int main()
+{
+    Employee joe {};
+
+    joe.age = 32;  // use member selection operator (.) to select the age member of variable joe
+
+    std::cout << joe.age << '\n'; // print joe's age
+
+    return 0;
+}
+```
+
+## 10.6 — Struct aggregate initialization
+
+### Data members are not initialized by default
+
+Much like normal variables, data members are not initialized by default. Consider the following struct:
+
+```cpp
+#include <iostream>
+
+struct Employee
+{
+    int id; // note: no initializer here
+    int age;
+    double wage;
+};
+
+int main()
+{
+    Employee joe; // note: no initializer here either
+    std::cout << joe.id << '\n';
+
+    return 0;
+}
+```
+
+Because we have not provided any initializers, when `joe` is instantiated, `joe.id`, `joe.age`, and `joe.wage` will all be uninitialized. We will then get undefined behavior when we try to print the value of `joe.id`.
+
+### What is an aggregate?
+
+In general programming, an **aggregate data type** (also called an **aggregate**) is any type that can contain multiple data members. Some types of aggregates allow members to have different types (e.g. structs), while others require that all members must be of a single type (e.g. arrays).
+
+**For advanced readers**
+
+To be an aggregate in C++, a type must meet the following criteria:
+
+-   Is a class type (a struct, class, or union), or an array type (a built-in array or std::array).
+-   Has no private or protected non-static data members (13.3 -- Public vs private access specifiers).
+-   Has no user-declared or inherited constructors (13.5 -- Constructors).
+-   Has no base classes (17.2 -- Basic inheritance in C++).
+-   Has no virtual member functions (18.2 -- Virtual functions and polymorphism).
+
+### Aggregate initialization of a struct
+
+There are 2 primary forms of aggregate initialization:
+
+```cpp
+struct Employee
+{
+    int id {};
+    int age {};
+    double wage {};
+};
+
+int main()
+{
+    Employee frank = { 1, 32, 60000.0 }; // copy-list initialization using braced list
+    Employee joe { 2, 28, 45000.0 };     // list initialization using braced list (preferred)
+
+    return 0;
+}
+```
+
+### Missing initializers in an initializer list
+
+```cpp
+struct Employee
+{
+    int id {};
+    int age {};
+    double wage {};
+};
+
+int main()
+{
+    Employee joe { 2, 28 }; // joe.wage will be value-initialized to 0.0
+
+    return 0;
+}
+```
+
+### Const structs
+
+Variables of a struct type can be const (or constexpr), and just like all const variables, they must be initialized.
+
+```cpp
+struct Rectangle
+{
+    double length {};
+    double width {};
+};
+
+int main()
+{
+    const Rectangle unit { 1.0, 1.0 };
+    const Rectangle zero { }; // value-initialize all members
+
+    return 0;
+}
+```
+
+### Designated initializers (C++20)
+
+```cpp
+struct Foo
+{
+    int a{ };
+    int b{ };
+    int c{ };
+};
+
+int main()
+{
+    Foo f1{ .a{ 1 }, .c{ 3 } }; // ok: f1.a = 1, f1.b = 0 (value initialized), f1.c = 3
+    Foo f2{ .a = 1, .c = 3 };   // ok: f2.a = 1, f2.b = 0 (value initialized), f2.c = 3
+    Foo f3{ .b{ 2 }, .a{ 1 } }; // error: initialization order does not match order of declaration in struct
+
+    return 0;
+}
+```
+
+### Assignment with an initializer list
+
+```cpp
+struct Employee
+{
+    int id {};
+    int age {};
+    double wage {};
+};
+
+int main()
+{
+    Employee joe { 1, 32, 60000.0 };
+
+    joe.age  = 33;      // Joe had a birthday
+    joe.wage = 66000.0; // and got a raise
+
+    joe = { joe.id, 33, 66000.0 }; // Joe had a birthday and got a raise
+    return 0;
+
+    joe = { .id = joe.id, .age = 33, .wage = 66000.0 }; // C++20
+```
+
+## 10.7 — Default member initialization
+
+### Explicit initialization values take precedence over default values
+
+### Missing initializers in an initializer list when default values exist
+
+### Recapping the initialization possibilities
+
+If an aggregate is defined with an initialization list:
+
+-   If an explicit initialization value exists, that explicit value is used.
+-   If an initializer is missing and a default member initializer exists, the default is used.
+-   If an initializer is missing and no default member initializer exists, value initialization occurs.
+
+If an aggregate is defined with no initialization list:
+
+-   If a default member initializer exists, the default is used.
+-   If no default member initializer exists, the member remains uninitialized.
+
+```cpp
+struct Something
+{
+    int x;       // no default initialization value (bad)
+    int y {};    // value-initialized by default
+    int z { 2 }; // explicit default value
+};
+
+int main()
+{
+    Something s1;             // No initializer list: s1.x is uninitialized, s1.y and s1.z use defaults
+    Something s2 { 5, 6, 7 }; // Explicit initializers: s2.x, s2.y, and s2.z use explicit values (no default values are used)
+    Something s3 {};          // Missing initializers: s3.x is value initialized, s3.y and s3.z use defaults
+
+    return 0;
+}
+```
+
+### Always provide default values for your members
+
+```cpp
+struct Fraction
+{
+	int numerator { }; //we should use { 0 } here, but for the sake of example we'll use value initialization instead
+	int denominator { 1 };
+};
+```
+
+### Default initialization vs value initialization for aggregates
+
+```cpp
+struct Foo
+{
+    int id; // note: no initializer here
+    int age{};
+
+};
+
+int main()
+{
+    // Default initialization
+    Foo joe; // note: no initializer here
+    std::cout << joe.id << '\n'; // unbehaviour
+
+    // Value initialization
+    Foo jack{}; // note: initializer list here
+    std::cout << jack.id << '\n'; // print 0
+
+    return 0;
+}
+```
+
+For aggregates, prefer value initialization (with an empty braces initializer) to default initialization (with no braces).
+
+## 10.8 — Passing and returning structs
+
+### Passing structs (by reference)
+
+```cpp
+#include <iostream>
+
+struct Employee
+{
+    int id {};
+    int age {};
+    double wage {};
+};
+
+void printEmployee(const Employee& employee) // note pass by reference here
+{
+    std::cout << "ID:   " << employee.id << '\n';
+    std::cout << "Age:  " << employee.age << '\n';
+    std::cout << "Wage: " << employee.wage << '\n';
+}
+
+int main()
+{
+    Employee joe { 14, 32, 24.15 };
+    Employee frank { 15, 28, 18.27 };
+
+    // Print Joe's information
+    printEmployee(joe);
+
+    std::cout << '\n';
+
+    // Print Frank's information
+    printEmployee(frank);
+
+    return 0;
+}
+```
+
+### Returning structs
+
+Structs are usually returned by value, so as not to return a dangling reference.
+
+```cpp
+#include <iostream>
+
+struct Point3d
+{
+    double x { 0.0 };
+    double y { 0.0 };
+    double z { 0.0 };
+};
+
+Point3d getZeroPoint()
+{
+    // We can create a variable and return the variable (we'll improve this below)
+    Point3d temp { 0.0, 0.0, 0.0 };
+    return temp;
+}
+
+int main()
+{
+    Point3d zero{ getZeroPoint() };
+
+    if (zero.x == 0.0 && zero.y == 0.0 && zero.z == 0.0)
+        std::cout << "The point is zero\n";
+    else
+        std::cout << "The point is not zero\n";
+
+    return 0;
+}
+```
+
+### Deducing the return type
+
+In the case where the function has an explicit return type (e.g. `Point3d`), we can even omit the type in the return statement:
+
+```cpp
+Point3d getZeroPoint()
+{
+    // We already specified the type at the function declaration
+    // so we don't need to do so here again
+    return { 0.0, 0.0, 0.0 }; // return an unnamed Point3d
+
+    // We can use empty curly braces to value-initialize all members
+    return {}; // same as above
+}
+```
+
+## 10.9 — Struct miscellany
+
+### Structs with program-defined members
+
+### Struct size and data structure alignment
+
+## 10.10 — Member selection with pointers and references
+
+### Member selection for structs and references to structs
+
+### Member selection for pointers to structs
+
+```cpp
+#include <iostream>
+
+struct Employee
+{
+    int id{};
+    int age{};
+    double wage{};
+};
+
+int main()
+{
+    Employee joe{ 1, 34, 65000.0 };
+
+    ++joe.age;
+    joe.wage = 68000.0;
+
+    Employee* ptr{ &joe };
+    std::cout << (*ptr).id << '\n'; // Not great but works: First dereference ptr, then use member selection
+
+    return 0;
+}
+```
+
+To make for a cleaner syntax, C++ offers a **member selection from pointer operator (->)** (also sometimes called the **arrow operator**) that can be used to select members from a pointer to an object:
+
+```cpp
+#include <iostream>
+
+struct Employee
+{
+    int id{};
+    int age{};
+    double wage{};
+};
+
+int main()
+{
+    Employee joe{ 1, 34, 65000.0 };
+
+    ++joe.age;
+    joe.wage = 68000.0;
+
+    Employee* ptr{ &joe };
+    std::cout << ptr->id << '\n'; // Better: use -> to select member from pointer to object
+
+    return 0;
+}
+```
+
+This member selection from pointer operator (->) works identically to the member selection operator (.) but does an implicit dereference of the pointer object before selecting the member. Thus `ptr->id` is equivalent to `(*ptr).id`.
+
+### Mixing pointers and non-pointers to members
+
+```cpp
+#include <iostream>
+#include <string>
+
+struct Paw
+{
+    int claws{};
+};
+
+struct Animal
+{
+    std::string name{};
+    Paw paw{};
+};
+
+int main()
+{
+    Animal puma{ "Puma", { 5 } };
+
+    Animal* ptr{ &puma };
+
+    // ptr is a pointer, use ->
+    // paw is not a pointer, use .
+
+    std::cout << (ptr->paw).claws << '\n';
+
+    return 0;
+}
+```
+
+Note that in the case of `(ptr->paw).claws`, parentheses aren’t necessary since both `operator->` and `operator.` evaluate in left to right order, but it does help readability slightly.
+
+## 10.11 — Class templates
+
+### Class templates
+
+```cpp
+#include <iostream>
+
+template <typename T>
+struct Pair
+{
+    T first{};
+    T second{};
+};
+
+int main()
+{
+    Pair<int> p1{ 5, 6 };        // instantiates Pair<int> and creates object p1
+    std::cout << p1.first << ' ' << p1.second << '\n';
+
+    Pair<double> p2{ 1.2, 3.4 }; // instantiates Pair<double> and creates object p2
+    std::cout << p2.first << ' ' << p2.second << '\n';
+
+    Pair<double> p3{ 7.8, 9.0 }; // creates object p3 using prior definition for Pair<double>
+    std::cout << p3.first << ' ' << p3.second << '\n';
+
+    return 0;
+}
+```
+
+Here’s the same example as above, showing what the compiler actually compiles after all template instantiations are done:
+
+```cpp
+#include <iostream>
+
+// A declaration for our Pair class template
+// (we don't need the definition any more since it's not used)
+template <typename T>
+struct Pair;
+
+// Explicitly define what Pair<int> looks like
+template <> // tells the compiler this is a template type with no template parameters
+struct Pair<int>
+{
+    int first{};
+    int second{};
+};
+
+// Explicitly define what Pair<double> looks like
+template <> // tells the compiler this is a template type with no template parameters
+struct Pair<double>
+{
+    double first{};
+    double second{};
+};
+
+int main()
+{
+    Pair<int> p1{ 5, 6 };        // instantiates Pair<int> and creates object p1
+    std::cout << p1.first << ' ' << p1.second << '\n';
+
+    Pair<double> p2{ 1.2, 3.4 }; // instantiates Pair<double> and creates object p2
+    std::cout << p2.first << ' ' << p2.second << '\n';
+
+    Pair<double> p3{ 7.8, 9.0 }; // creates object p3 using prior definition for Pair<double>
+    std::cout << p3.first << ' ' << p3.second << '\n';
+
+    return 0;
+}
+```
+
+### Using our class template in a function
+
+```cpp
+#include <iostream>
+
+template <typename T>
+struct Pair
+{
+    T first{};
+    T second{};
+};
+
+template <typename T>
+constexpr T max(Pair<T> p)
+{
+    return (p.first < p.second ? p.second : p.first);
+}
+
+int main()
+{
+    Pair<int> p1{ 5, 6 };
+    std::cout << max<int>(p1) << " is larger\n"; // explicit call to max<int>
+
+    Pair<double> p2{ 1.2, 3.4 };
+    std::cout << max(p2) << " is larger\n"; // call to max<double> using template argument deduction (prefer this)
+
+    return 0;
+}
+```
+
+The following snippet shows what the compiler actually instantiates in such a case:
+
+```cpp
+template <>
+constexpr int max(Pair<int> p)
+{
+    return (p.first < p.second ? p.second : p.first);
+}
+```
+
+### Class templates with template type and non-template type members
+
+```cpp
+template <typename T>
+struct Foo
+{
+    T first{};    // first will have whatever type T is replaced with
+    int second{}; // second will always have type int, regardless of what type T is
+};
+```
+
+### Class templates with multiple template types
+
+```cpp
+#include <iostream>
+
+template <typename T, typename U>
+struct Pair
+{
+    T first{};
+    U second{};
+};
+
+template <typename T, typename U>
+void print(Pair<T, U> p)
+{
+    std::cout << '[' << p.first << ", " << p.second << ']';
+}
+
+int main()
+{
+    Pair<int, double> p1{ 1, 2.3 }; // a pair holding an int and a double
+    Pair<double, int> p2{ 4.5, 6 }; // a pair holding a double and an int
+    Pair<int, int> p3{ 7, 8 };      // a pair holding two ints
+
+    print(p2);
+
+    return 0;
+}
+```
+
+### std::pair
+
+ecause working with pairs of data is common, the C++ standard library contains a class template named `std::pair` (in the `<utility>` header) that is defined identically to the `Pair` class template with multiple template types in the preceding section. In fact, we can swap out the `pair` struct we developed for `std::pair`:
+
+```cpp
+#include <iostream>
+#include <utility>
+
+template <typename T, typename U>
+void print(std::pair<T, U> p)
+{
+    std::cout << '[' << p.first << ", " << p.second << ']';
+}
+
+int main()
+{
+    std::pair<int, double> p1{ 1, 2.3 }; // a pair holding an int and a double
+    std::pair<double, int> p2{ 4.5, 6 }; // a pair holding a double and an int
+    std::pair<int, int> p3{ 7, 8 };      // a pair holding two ints
+
+    print(p2);
+
+    return 0;
+}
+```
+
+### Using class templates in multiple files
+
+Just like function templates, class templates are typically defined in header files so they can be included into any code file that needs them. Both template definitions and type definitions are exempt from the one-definition rule, so this won’t cause problems:
+
+```cpp
+#ifndef PAIR_H
+#define PAIR_H
+
+template <typename T>
+struct Pair
+{
+    T first{};
+    T second{};
+};
+
+template <typename T>
+constexpr T max(Pair<T> p)
+{
+    return (p.first < p.second ? p.second : p.first);
+}
+
+#endif
+```
+
+## 10.12 — Class template argument deduction (CTAD) and deduction guides
+
+### Class template argument deduction (CTAD) (C++17)
+
+```cpp
+#include <utility> // for std::pair
+
+int main()
+{
+    std::pair<int, int> p1{ 1, 2 }; // explicitly specify class template std::pair<int, int> (C++11 onward)
+    std::pair p2{ 1, 2 };           // CTAD used to deduce std::pair<int, int> from the initializers (C++17)
+
+    std::pair<> p1 { 1, 2 };    // error: too few template arguments, both arguments not deduced
+    std::pair<int> p2 { 3, 4 }; // error: too few template arguments, second argument not deduced
+
+    return 0;
+}
+```
+
+### Template argument deduction guides (C++17)
+
+You may be surprised to find that the following program (which is almost identical to the example that uses `std::pair` above) doesn’t compile in C++17:
+
+```cpp
+// define our own Pair type
+template <typename T, typename U>
+struct Pair
+{
+    T first{};
+    U second{};
+};
+
+int main()
+{
+    Pair<int, int> p1{ 1, 2 }; // ok: we're explicitly specifying the template arguments
+    Pair p2{ 1, 2 };           // compile error in C++17
+
+    return 0;
+}
+```
+
+If you compile this in C++17, you’ll likely get some error about “class template argument deduction failed” or “cannot deduce template arguments” or “No viable constructor or deduction guide”. This is because in C++17, CTAD doesn’t know how to deduce the template arguments for aggregate class templates. To address this, we can provide the compiler with a **deduction guide**, which tells the compiler how to deduce the template arguments for a given class template.
+
+Here’s the same program with a deduction guide:
+
+```cpp
+template <typename T, typename U>
+struct Pair
+{
+    T first{};
+    U second{};
+};
+
+// Here's a deduction guide for our Pair (needed in C++17)
+// Pair objects initialized with arguments of type T and U should deduce to Pair<T, U>
+template <typename T, typename U>
+Pair(T, U) -> Pair<T, U>;
+
+int main()
+{
+    Pair<int, int> p1{ 1, 2 }; // explicitly specify class template Pair<int, int> (C++11 onward)
+    Pair p2{ 1, 2 };           // CTAD used to deduce Pair<int, int> from the initializers (C++17)
+
+    Pair p3;                   // error, see next section
+
+    return 0;
+}
+```
+
+### Type template parameters with default values
+
+```cpp
+template <typename T=int, typename U=int> // default T and U to type int
+struct Pair
+{
+    T first{};
+    U second{};
+};
+
+template <typename T, typename U>
+Pair(T, U) -> Pair<T, U>;
+
+int main()
+{
+    Pair<int, int> p1{ 1, 2 }; // explicitly specify class template Pair<int, int> (C++11 onward)
+    Pair p2{ 1, 2 };           // CTAD used to deduce Pair<int, int> from the initializers (C++17)
+
+    Pair p3;                   // uses default Pair<int, int>
+
+    return 0;
+}
+```
+
+### Type aliases and alias templates for class templates
+
+In lesson 8.7 -- Typedefs and type aliases, we discussed how type aliases let us define an alias for an existing type.
+
+Creating a type alias for a class template where all template arguments are explicitly specified works just like normal:
+
+```cpp
+#include <iostream>
+
+template <typename T>
+struct Pair
+{
+    T first{};
+    T second{};
+};
+
+int main()
+{
+    using Point = Pair<int>;
+    Point p { 1, 2 };
+
+    std::cout << p.first << ' ' << p.second << '\n';
+
+    return 0;
+}
+```
+
+But what if we want a type alias where the template arguments will be defined by the user of the alias? To do this, we can define an **alias template**, which is a templated type alias.
+
+Here’s an example of how this works:
+
+```cpp
+#include <iostream>
+
+template <typename T>
+struct Pair
+{
+    T first{};
+    T second{};
+};
+
+// Here's our alias template
+// Alias templates must be defined in global scope
+template <typename T>
+using Coord = Pair<T>;
+
+int main()
+{
+    Coord<int> p1 { 1, 2 }; // We can explicitly specify type template argument
+    Coord p2 { 1, 2 }; // In C++20, we can also use alias template deduction to deduce the template arguments in cases where CTAD works
+
+    std::cout << p1.first << ' ' << p1.second << '\n';
+    std::cout << p2.first << ' ' << p2.second << '\n';
+
+    return 0;
+}
+```
+
+There are a couple of things worth noting about this example.
+
+First, unlike normal type aliases (which can be defined inside a block), alias templates must be defined in the global scope. Second, before C++20, we must explicitly specify the template arguments. As of C++20, we can use alias template deduction, which will deduce the type of the template arguments from an initializer in cases where the aliased type would work with CTAD.
+
+### CTAD doesn’t work with non-static member initialization
+
+When initializing the member of a class type using non-static member initialization, CTAD will not work in this context. All template arguments must be explicitly specified:
+
+```cpp
+#include <utility> // for std::pair
+
+struct Foo
+{
+    std::pair<int, int> p1{ 1, 2 }; // ok, template arguments explicitly specified
+    std::pair p2{ 1, 2 };           // compile error, CTAD can't be used in this context
+};
+
+int main()
+{
+    std::pair p3{ 1, 2 };           // ok, CTAD can be used here
+    return 0;
+}
+```
