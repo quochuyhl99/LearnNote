@@ -36,7 +36,7 @@ This is a content of learncpp.com
 
 ### std::cin
 
-## Uninitialized variables and undefined behavior
+## 1.6 - Uninitialized variables and undefined behavior
 
 ### Uninitialized variables
 
@@ -7609,3 +7609,2586 @@ int main()
     return 0;
 }
 ```
+
+# Chapter 11: Arrays, Strings, and Dynamic Allocation
+
+## 11.1 — Arrays (Part I)
+
+### Array elements and subscripting
+
+Each of the variables in an array is called an **element**
+
+to access individual elements of an array, we use the array name, along with the **subscript operator ([])**, and a parameter called a **subscript** (or **index**) that tells the compiler which element we want.
+
+Unlike everyday life, where we typically count starting from 1, in C++, arrays always count starting from 0!
+
+For an array of length N, the array elements are numbered 0 through N-1. This is called the array’s **range**.
+
+### An example array program
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int prime[5]{}; // hold the first 5 prime numbers
+    prime[0] = 2; // The first element has index 0
+    prime[1] = 3;
+    prime[2] = 5;
+    prime[3] = 7;
+    prime[4] = 11; // The last element has index 4 (array length-1)
+
+    std::cout << "The lowest prime number is: " << prime[0] << '\n';
+    std::cout << "The sum of the first 5 primes is: " << prime[0] + prime[1] + prime[2] + prime[3] + prime[4] << '\n';
+
+    return 0;
+}
+```
+
+### Array data types
+
+### Array subscripts
+
+In C++, array subscripts must always be an integral type. This includes char, short, int, long, long long, etc… and strangely enough, bool (where false gives an index of 0 and true gives an index of 1). An array subscript can be a literal value, a variable (constant or non-constant), or an expression that evaluates to an integral type.
+
+Here are some examples:
+
+````cpp
+In C++, array subscripts must always be an integral type. This includes char, short, int, long, long long, etc… and strangely enough, bool (where false gives an index of 0 and true gives an index of 1). An array subscript can be a literal value, a variable (constant or non-constant), or an expression that evaluates to an integral type.
+
+Here are some examples:
+```cpp
+int array[5]{}; // declare an array of length 5
+
+// using a literal (constant) index:
+array[1] = 7; // ok
+
+// using an enum (constant) index
+enum Animals
+{
+    animal_cat = 2
+};
+array[animal_cat] = 4; // ok
+
+// using a variable (non-constant) index:
+int index{ 3 };
+array[index] = 7; // ok
+
+// using an expression that evaluates to an integer index:
+array[1+2] = 7; // ok
+````
+
+### Fixed array declarations
+
+When declaring a fixed array, the length of the array (between the square brackets) must be a **compile-time constant**. This is because the length of a fixed array must be known at compile time. Here are some different ways to declare fixed arrays:
+
+```cpp
+// using a literal constant
+int numberOfLessonsPerDay[7]{}; // Ok
+
+// using a constexpr symbolic constant
+constexpr int daysPerWeek{ 7 };
+int numberOfLessonsPerDay[daysPerWeek]{}; // Ok
+
+// using an enumerator
+enum DaysOfWeek
+{
+    monday,
+    tuesday,
+    wednesday,
+    thursday,
+    friday,
+    saturday,
+    sunday,
+
+    maxDaysOfWeek
+};
+int numberOfLessonsPerDay[maxDaysOfWeek]{}; // Ok
+
+// using a macro
+#define DAYS_PER_WEEK 7
+int numberOfLessonsPerDay[DAYS_PER_WEEK]{}; // Works, but don't do this (use a constexpr symbolic constant instead)
+```
+
+Note that non-const variables or runtime constants cannot be used:
+
+```cpp
+// using a non-const variable
+int daysPerWeek{};
+std::cin >> daysPerWeek;
+int numberOfLessonsPerDay[daysPerWeek]{}; // Not ok -- daysPerWeek is not a compile-time constant!
+
+// using a runtime const variable
+int temp{ 5 };
+const int daysPerWeek{ temp }; // the value of daysPerWeek isn't known until runtime, so this is a runtime constant, not a compile-time constant!
+int numberOfLessonsPerDay[daysPerWeek]{}; // Not ok
+```
+
+### A note on dynamic arrays
+
+Because fixed arrays have memory allocated at compile time, that introduces two limitations:
+
+-   Fixed arrays cannot have a length based on either user input or some other value calculated at runtime.
+-   Fixed arrays have a fixed length that can not be changed.
+
+In many cases, these limitations are problematic. Fortunately, C++ supports a second kind of array known as a dynamic array. The length of a dynamic array can be set at runtime, and their length can be changed. However, dynamic arrays are a little more complicated to instantiate, so we’ll cover them later in the chapter.
+
+## 11.2 — Arrays (Part II)
+
+### Initializing fixed arrays
+
+```cpp
+int prime[5]{ 2, 3, 5, 7, 11 }; // use initializer list to initialize the fixed array
+```
+
+If there are more initializers in the list than the array can hold, the compiler will generate an error.
+
+If there are less initializers in the list than the array can hold, the remaining elements are initialized to 0 (or whatever value 0 converts to for a non-integral fundamental type -- e.g. 0.0 for double). This is called zero initialization.
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int array[5]{ 7, 4, 5 }; // only initialize first 3 elements
+
+    std::cout << array[0] << '\n';
+    std::cout << array[1] << '\n';
+    std::cout << array[2] << '\n';
+    std::cout << array[3] << '\n';
+    std::cout << array[4] << '\n';
+
+    return 0;
+}
+```
+
+This prints:
+
+```
+7
+4
+5
+0
+0
+```
+
+Consequently, to initialize all the elements of an array to 0, you can do this:
+
+```cpp
+int array[5]{};          // Initialize all elements to 0
+double array[5] {};      // Initialize all elements to 0.0
+std::string array[5] {}; // Initialize all elements to an empty string
+```
+
+If the initializer list is omitted, the elements are uninitialized, unless they are a class-type that self-initializes.
+
+```cpp
+int array[5];         // uninitialized (since int doesn't self-initialize)
+double array[5];      // uninitialized (since double doesn't self-initialize)
+std::string array[5]; // Initialize all elements to an empty string
+```
+
+### Omitted length
+
+If you are initializing a fixed array of elements using an initializer list, the compiler can figure out the length of the array for you, and you can omit explicitly declaring the length of the array.
+
+The following two lines are equivalent:
+
+```cpp
+int array[5]{ 0, 1, 2, 3, 4 }; // explicitly define the length of the array
+int array[]{ 0, 1, 2, 3, 4 }; // let the initializer list set length of the array
+```
+
+### Arrays and enums
+
+Give more info to programmer, Make it clearly, example:
+
+```cpp
+enum StudentNames
+{
+    kenny, // 0
+    kyle, // 1
+    stan, // 2
+    butters, // 3
+    cartman, // 4
+    wendy, // 5
+    max_students // 6
+};
+
+int main()
+{
+    int testScores[max_students]{}; // allocate 6 integers
+    testScores[stan] = 76; // still works
+
+    return 0;
+}
+```
+
+### Arrays and enum classes
+
+Note that Enum classes don’t have an implicit conversion to integer
+
+using a static_cast to convert the enumerator to an integer:
+
+```cpp
+enum class StudentNames
+{
+    kenny, // 0
+    kyle, // 1
+    stan, // 2
+    butters, // 3
+    cartman, // 4
+    wendy, // 5
+    max_students // 6
+};
+
+int main()
+{
+    int testScores[static_cast<int>(StudentNames::max_students)]{}; // allocate 6 integers
+    testScores[static_cast<int>(StudentNames::stan)] = 76;
+
+    return 0;
+}
+```
+
+However, doing this is somewhat of a pain, so it might be better to use a standard enum inside of a namespace:
+
+```cpp
+namespace StudentNames
+{
+    enum StudentNames
+    {
+        kenny, // 0
+        kyle, // 1
+        stan, // 2
+        butters, // 3
+        cartman, // 4
+        wendy, // 5
+        max_students // 6
+    };
+}
+
+int main()
+{
+    int testScores[StudentNames::max_students]{}; // allocate 6 integers
+    testScores[StudentNames::stan] = 76;
+
+    return 0;
+}
+```
+
+### Passing arrays to functions
+
+Because copying large arrays can be very expensive, C++ **does not copy an array** when an array is passed into a function. Instead, the **actual array** is passed. This has the side effect of allowing functions to directly change the value of array elements!
+
+```cpp
+#include <iostream>
+
+void passValue(int value) // value is a copy of the argument
+{
+    value = 99; // so changing it here won't change the value of the argument
+}
+
+void passArray(int prime[5]) // prime is the actual array
+{
+    prime[0] = 11; // so changing it here will change the original argument!
+    prime[1] = 7;
+    prime[2] = 5;
+    prime[3] = 3;
+    prime[4] = 2;
+}
+
+int main()
+{
+    int value{ 1 };
+    std::cout << "before passValue: " << value << '\n';
+    passValue(value);
+    std::cout << "after passValue: " << value << '\n';
+
+    int prime[]{ 2, 3, 5, 7, 11 }; // type deduced as int prime[5]
+    std::cout << "before passArray: " << prime[0] << " " << prime[1] << " " << prime[2] << " " << prime[3] << " " << prime[4] << '\n';
+    passArray(prime);
+    std::cout << "after passArray: " << prime[0] << " " << prime[1] << " " << prime[2] << " " << prime[3] << " " << prime[4] << '\n';
+
+    return 0;
+}
+```
+
+This print:
+
+```cpp
+before passValue: 1
+after passValue: 1
+before passArray: 2 3 5 7 11
+after passArray: 11 7 5 3 2
+```
+
+Why this happens is related to the way arrays are implemented in C++, a topic we’ll revisit in lesson 11.7 -- Pointers and arrays. For now, you can consider this as a quirk of the language.
+
+As a side note, if you want to ensure a function does not modify the array elements passed into it, you can make the array const:
+
+```cpp
+// even though prime is the actual array, within this function it should be treated as a constant
+void passArray(const int prime[5])
+{
+    // so each of these lines will cause a compile error!
+    prime[0] = 11;
+    prime[1] = 7;
+    prime[2] = 5;
+    prime[3] = 3;
+    prime[4] = 2;
+}
+```
+
+### Determining the length of an array
+
+-   The `std::size()` function from the `<iterator>` header can be used to determine the length of arrays.
+
+```cpp
+#include <iostream>
+#include <iterator> // for std::size C++17
+
+int main()
+{
+    int array[]{ 1, 1, 2, 3, 5, 8, 13, 21 };
+    std::cout << "The array has: " << std::size(array) << " elements\n";
+
+    return 0;
+}
+```
+
+This prints:
+
+```cpp
+The array has: 8 elements
+```
+
+-   Note that due to the way C++ passes arrays to functions, this will not work for arrays that have been passed to functions!
+
+```cpp
+#include <iostream>
+#include <iterator>
+
+void printSize(int array[])
+{
+    std::cout << std::size(array) << '\n'; // Error
+}
+
+int main()
+{
+    int array[]{ 1, 1, 2, 3, 5, 8, 13, 21 };
+    std::cout << std::size(array) << '\n'; // will print the length of the array
+    printSize(array);
+
+    return 0;
+}
+```
+
+`std::size()` will work with other kinds of objects (such as `std::array` and `std::vector`), and it will cause a compiler error if you try to use it on a fixed array that has been passed to a function! Note that `std::size` returns an unsigned value. If you need a signed value, you can either cast the result or, since **C++20**, use `std::ssize()` (stands for signed size).
+
+`std::size()` was added in **C++17**. If you’re using **C++11** or **C++14**, you can use this function instead:
+
+```cpp
+#include <iostream>
+
+template <typename T, std::size_t N>
+constexpr std::size_t length(const T(&)[N]) noexcept
+{
+	return N;
+}
+
+int main() {
+
+	int array[]{ 1, 1, 2, 3, 5, 8, 13, 21 };
+	std::cout << "The array has: " << length(array) << " elements\n";
+
+	return 0;
+}
+```
+
+In older code, we can determine the length of a fixed array by dividing the size of the entire array by the size of an array element:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int array[]{ 1, 1, 2, 3, 5, 8, 13, 21 };
+    std::cout << "The array has: " << sizeof(array) / sizeof(array[0]) << " elements\n";
+
+    return 0;
+}
+```
+
+Using algebra, we can rearrange this equation: array length = array size / element size. sizeof(array) is the array size, and sizeof(array[0]) is the element size, so our equation becomes array length = sizeof(array) / sizeof(array[0]). Sometimes `*array` is used instead of `array[0]` (we discuss what `*array` is in 11.8 -- Pointer arithmetic and array indexing).
+
+Note that this will only work if the array is a fixed-length array, and you’re doing this trick in the same function that array is declared in (we’ll talk more about why this restriction exists in a future lesson in this chapter).
+
+When sizeof is used on an array that has been passed to a function, it doesn’t error out like std::size() does. Instead, it returns the size of a pointer.
+
+```cpp
+#include <iostream>
+
+void printSize(int array[])
+{
+    std::cout << sizeof(array) / sizeof(array[0]) << '\n';
+}
+
+int main()
+{
+    int array[]{ 1, 1, 2, 3, 5, 8, 13, 21 };
+    std::cout << sizeof(array) / sizeof(array[0]) << '\n';
+    printSize(array);
+
+    return 0;
+}
+```
+
+Again assuming 8 byte pointers and 4 byte integers, this prints
+
+```cpp
+8
+2
+```
+
+The calculation in main() was correct, but the sizeof() in printSize() returned 8 (the size of pointer), and 8 divided by 4 is 2.
+
+For this reason, be careful about using sizeof() on arrays!
+
+### Indexing an array out of range
+
+```cpp
+int main()
+{
+    int prime[5]{}; // hold the first 5 prime numbers
+    prime[5] = 13; // 6th element (index 5)
+
+    return 0;
+}
+```
+
+C++ does not do any checking to make sure that your indices are valid for the length of your array. So in the above example, the value of 13 will be inserted into memory where the 6th element would have been had it existed. When this happens, you will get undefined behavior -- for example, this could overwrite the value of another variable, or cause your program to crash.
+
+Although it happens less often, C++ will also let you use a negative index, with similarly undesirable results.
+
+## 11.3 — Arrays and loops
+
+## 11.4 — Sorting an array using selection sort
+
+learn selection sort, bubble sort and how to optimize bubble sort
+
+## 11.5 — Multidimensional Arrays
+
+```cpp
+int array[3][5]; // a 3-element array of 5-element arrays
+```
+
+Since we have 2 subscripts, this is a two-dimensional array.
+
+In a two-dimensional array, it is convenient to think of the first (left) subscript as being the row, and the second (right) subscript as being the column. This is called **row-major** order. Conceptually, the above two-dimensional array is laid out as follows:
+
+```
+[0][0]  [0][1]  [0][2]  [0][3]  [0][4] // row 0
+[1][0]  [1][1]  [1][2]  [1][3]  [1][4] // row 1
+[2][0]  [2][1]  [2][2]  [2][3]  [2][4] // row 2
+```
+
+### Initializing two-dimensional arrays
+
+```cpp
+int array[3][5]
+{
+  { 1, 2, 3, 4, 5 }, // row 0
+  { 6, 7, 8, 9, 10 }, // row 1
+  { 11, 12, 13, 14, 15 } // row 2
+};
+
+int array[3][5]
+{
+  { 1, 2 }, // row 0 = 1, 2, 0, 0, 0
+  { 6, 7, 8 }, // row 1 = 6, 7, 8, 0, 0
+  { 11, 12, 13, 14 } // row 2 = 11, 12, 13, 14, 0
+};
+```
+
+Two-dimensional arrays with initializer lists can omit (only) the leftmost length specification:
+
+```cpp
+// This is OK
+int array[][5]
+{
+  { 1, 2, 3, 4, 5 },
+  { 6, 7, 8, 9, 10 },
+  { 11, 12, 13, 14, 15 }
+};
+
+// This is not allowed
+int array[][]
+{
+  { 1, 2, 3, 4 },
+  { 5, 6, 7, 8 }
+};
+```
+
+Just like normal arrays, multidimensional arrays can still be initialized to 0 as follows:
+
+```cpp
+int array[3][5]{};
+```
+
+### Multidimensional arrays larger than two dimensions
+
+Multidimensional arrays may be larger than two dimensions. Here is a declaration of a three-dimensional array:
+
+```cpp
+int array[5][4][3];
+```
+
+Three-dimensional arrays are hard to initialize in any kind of intuitive way using initializer lists, so it’s typically better to initialize the array to 0 and explicitly assign values using nested loops.
+
+## 11.6 — C-style strings
+
+In lesson 4.15 -- Literals, we defined a string as a collection of sequential characters, such as “Hello, world!”. Strings are the primary way in which we work with text in C++, and std::string makes working with strings in C++ easy.
+
+Modern C++ supports two different types of strings: std::string (as part of the standard library), and C-style strings (natively, as inherited from the C language). It turns out that std::string is implemented using C-style strings. In this lesson, we’ll take a closer look at C-style strings.
+
+### C-style strings
+
+A **C-style string** is simply an array of characters that uses a null terminator. A **null terminator** is a special character (‘\0’, ascii code 0) used to indicate the end of the string. More generically, A C-style string is called a **null-terminated string**.
+
+To define a C-style string, simply declare a char array and initialize it with a string literal:
+
+```cpp
+char myString[]{ "string" };
+```
+
+Although “string” only has 6 letters, C++ automatically adds a null terminator to the end of the string for us (we don’t need to include it ourselves). Consequently, myString is actually an array of length 7!
+
+One important point to note is that C-style strings **follow all the same rules as arrays**. This means you can initialize the string upon creation, but you can not assign values to it using the assignment operator after that!
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    char myString[]{ "string" };
+    myString = "rope"; // not ok!
+    myString[1] = 'p'; // ok
+    std::cout << myString << '\n';
+
+    return 0;
+}
+```
+
+This program prints:
+
+```cpp
+spring
+```
+
+When printing a C-style string, std::cout prints characters until it encounters the null terminator. If you accidentally overwrite the null terminator in a string (e.g. by assigning something to myString[6]), you’ll not only get all the characters in the string, but std::cout will just keep printing everything in adjacent memory slots until it happens to hit a 0 (null terminator)!
+
+Note that it’s fine if the array is larger than the string it contains:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    char name[20]{ "Alex" }; // only use 5 characters (4 letters + null terminator)
+    std::cout << "My name is: " << name << '\n';
+
+    return 0;
+}
+```
+
+In this case, the string “Alex” will be printed, and std::cout will stop at the null terminator. The rest of the characters in the array are ignored.
+
+### C-style strings and std::cin
+
+The recommended way of reading C-style strings using std::cin is as follows:
+
+```cpp
+#include <iostream>
+#include <iterator> // for std::size
+
+int main()
+{
+    char name[255] {}; // declare array large enough to hold 254 characters + null terminator
+    std::cout << "Enter your name: ";
+
+    // stopping the user from entering more than 254 characters (either unintentionally, or maliciously).
+    std::cin.getline(name, std::size(name));
+    std::cout << "You entered: " << name << '\n';
+
+    return 0;
+}
+```
+
+This call to cin.getline() will read up to 254 characters into name (leaving room for the null terminator!). Any excess characters will be discarded. In this way, we guarantee that we will not overflow the array!
+
+### Manipulating C-style strings
+
+Show many functions to manipulate C-style strings as part of the `<cstring>` header (dangerous to use)
+
+### Don’t use C-style strings
+
+Use `std::string` or `std::string_view` instead of C-style strings.
+
+## 11.7 — Pointers and arrays
+
+Pointers and arrays are intrinsically related in C++.
+
+### Array decay
+
+In all but two cases (which we’ll cover below), when a fixed array is used in an expression, the fixed array will **decay** (be implicitly converted) into **a pointer that points to the first element of the array**. You can see this in the following program:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int array[5]{ 9, 7, 5, 3, 1 };
+
+    // print address of the array's first element
+    std::cout << "Element 0 has address: " << &array[0] << '\n';
+
+    // print the value of the pointer the array decays to
+    std::cout << "The array decays to a pointer holding address: " << array << '\n';
+
+
+    return 0;
+}
+```
+
+On the author’s machine, this printed:
+
+```
+Element 0 has address: 0042FD5C
+The array decays to a pointer holding address: 0042FD5C
+```
+
+It’s a common fallacy in C++ to believe an array and a pointer to the array are identical. **They’re not**. In the above case, array is of type “int[5]”, and its “value” is the array elements themselves. A pointer to the array would be of type “int\*”, and its value would be the address of the first element of the array.
+
+We’ll see where this makes a difference shortly.
+
+All elements of the array can still be accessed through the pointer (we’ll see how this works in the next lesson), but information derived from the array’s type (such as how long the array is) can not be accessed from the pointer.
+
+However, this also effectively allows us to treat fixed arrays and pointers identically in most cases.
+
+For example, we can dereference the array to get the value of the first element:
+
+```cpp
+int array[5]{ 9, 7, 5, 3, 1 };
+
+// Deferencing an array returns the first element (the element with index 0)
+std::cout << *array << '\n'; // will print 9!
+
+char name[]{ "Jason" }; // C-style string (also an array)
+std::cout << *name << '\n'; // will print 'J'
+```
+
+This works because the array decays into a pointer of type int, and our pointer (also of type int) has the same type.
+
+### Differences between pointers and fixed arrays
+
+The primary difference occurs when using the sizeof() operator. When used on a fixed array, sizeof returns the size of the entire array (array length \* element size). When used on a pointer, sizeof returns the size of the pointer (in bytes). The following program illustrates this:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int array[5]{ 9, 7, 5, 3, 1 };
+
+    std::cout << sizeof(array) << '\n'; // will print sizeof(int) * array length
+
+    int* ptr{ array };
+    std::cout << sizeof(ptr) << '\n'; // will print the size of a pointer
+
+    return 0;
+}
+```
+
+A fixed array knows how long the array it is pointing to is. A pointer to the array does not.
+
+The second difference occurs when using the address-of operator (&). Taking the address of a pointer yields the memory address of the pointer variable. Taking the address of the array returns a pointer to the entire array. This pointer also points to the first element of the array, but the type information is different (in the above example, the type of `&array` is `int(*)[5]`). It’s unlikely you’ll ever need to use this.
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int array[5]{ 9, 7, 5, 3, 1 };
+    std::cout << array << '\n';	 // type int[5], prints 009DF9D4
+    std::cout << &array << '\n'; // type int(*)[5], prints 009DF9D4
+
+    std::cout << '\n';
+
+    int* ptr{ array };
+    std::cout << ptr << '\n';	 // type int*, prints 009DF9D4
+    std::cout << &ptr << '\n';	 // type int**, prints 009DF9C8
+
+    return 0;
+}
+```
+
+### Revisiting passing fixed arrays to functions
+
+Back in lesson 11.2 -- Arrays (Part II), we mentioned that because copying large arrays can be very expensive, C++ does not copy an array when an array is passed into a function. When passing an array as an argument to a function, a fixed array decays into a pointer, and the pointer is passed to the function:
+
+```cpp
+#include <iostream>
+
+void printSize(int* array)
+{
+    // array is treated as a pointer here
+    std::cout << sizeof(array) << '\n'; // prints the size of a pointer, not the size of the array!
+}
+
+int main()
+{
+    int array[]{ 1, 1, 2, 3, 5, 8, 13, 21 };
+    std::cout << sizeof(array) << '\n'; // will print sizeof(int) * array length
+
+    printSize(array); // the array argument decays into a pointer here
+
+    return 0;
+}
+```
+
+Note that this happens even if the parameter is declared as a fixed array:
+
+```cpp
+#include <iostream>
+
+// C++ will implicitly convert parameter array[] to *array
+void printSize(int array[])
+{
+    // array is treated as a pointer here, not a fixed array
+    std::cout << sizeof(array) << '\n'; // prints the size of a pointer, not the size of the array!
+}
+
+int main()
+{
+    int array[]{ 1, 1, 2, 3, 5, 8, 13, 21 };
+    std::cout << sizeof(array) << '\n'; // will print sizeof(int) * array length
+
+    printSize(array); // the array argument decays into a pointer here
+
+    return 0;
+}
+```
+
+In the above example, C++ implicitly converts parameters using the array syntax ([]) to the pointer syntax (\*). That means the following two function declarations are identical:
+
+```cpp
+void printSize(int array[]);
+void printSize(int* array);
+```
+
+Some programmers prefer using the [] syntax because it makes it clear that the function is expecting an array, not just a pointer to a value. However, in most cases, because the pointer doesn’t know how large the array is, you’ll need to pass in the array size as a separate parameter anyway (**strings being an exception because they’re null terminated**).
+
+We recommend using the array syntax, because it makes it clear that the parameter is expecting an array argument.
+
+### An intro to pass by address
+
+The fact that arrays decay into pointers when passed to a function explains the underlying reason why changing an array in a function changes the actual array argument passed in
+
+### Other times arrays don’t decay
+
+It is worth noting that arrays that are part of structs or classes do not decay when the whole struct or class is passed to a function. This yields a useful way to prevent decay if desired, and will be valuable later when we write classes that utilize arrays.
+
+Arrays passed by reference also will not decay.
+
+In the next lesson, we’ll take a look at pointer arithmetic, and talk about how array indexing actually works.
+
+## 11.8 — Pointer arithmetic and array indexing
+
+### Pointer arithmetic
+
+The C++ language allows you to perform integer addition or subtraction operations on pointers. If `ptr` points to an integer, `ptr + 1` is the address of the next integer in memory after `ptr`. `ptr - 1` is the address of the previous integer before `ptr`.
+
+Note that `ptr + 1` does not return the memory address after `ptr`, but the memory address of the next object of the type that `ptr` points to. If `ptr` points to an integer (assuming 4 bytes), `ptr + 3` means 3 integers (12 bytes) after `ptr`. If `ptr` points to a char, which is always 1 byte, `ptr + 3` means 3 chars (3 bytes) after `ptr`.
+
+When calculating the result of a pointer arithmetic expression, the compiler always multiplies the integer operand by the size of the object being pointed to. This is called **scaling**.
+
+### Arrays are laid out sequentially in memory
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int array[]{ 9, 7, 5, 3, 1 };
+
+    std::cout << "Element 0 is at address: " << &array[0] << '\n';
+    std::cout << "Element 1 is at address: " << &array[1] << '\n';
+    std::cout << "Element 2 is at address: " << &array[2] << '\n';
+    std::cout << "Element 3 is at address: " << &array[3] << '\n';
+
+    return 0;
+}
+```
+
+On the author’s machine, this printed:
+
+```
+Element 0 is at address: 0041FE9C
+Element 1 is at address: 0041FEA0
+Element 2 is at address: 0041FEA4
+Element 3 is at address: 0041FEA8
+```
+
+Note that each of these memory addresses is 4 bytes apart, which is the size of an integer on the author’s machine.
+
+### Pointer arithmetic, arrays, and the magic behind indexing
+
+In the section above, you learned that arrays are laid out in memory sequentially.
+
+In the previous lesson, you learned that a fixed array can decay into a pointer that points to the first element (element 0) of the array.
+
+Also in a section above, you learned that adding 1 to a pointer returns the memory address of the next object of that type in memory.
+
+Therefore, we might conclude that adding 1 to an array should point to the second element (element 1) of the array. We can verify experimentally that this is true:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+     int array[]{ 9, 7, 5, 3, 1 };
+
+     std::cout << &array[1] << '\n'; // print memory address of array element 1
+     std::cout << array+1 << '\n'; // print memory address of array pointer + 1
+
+     std::cout << array[1] << '\n'; // prints 7
+     std::cout << *(array+1) << '\n'; // prints 7 (note the parenthesis required here)
+
+    return 0;
+}
+```
+
+Note that when performing a dereference through the result of pointer arithmetic, parenthesis are necessary to ensure the operator precedence is correct, since operator \* has higher precedence than operator +.
+
+It turns out that when the compiler sees the subscript operator ([]), it actually translates that into a pointer addition and dereference! Generalizing, `array[n]` is the same as `*(array + n)`, where n is an integer. The subscript operator [] is there both to look nice and for ease of use (so you don’t have to remember the parenthesis).
+
+### Using a pointer to iterate through an array
+
+example:
+
+```cpp
+#include <iostream>
+#include <iterator>
+
+int* findValue(int* begin, int* end, int num) {
+    for (int* index{ begin }; index != end; ++index) {
+        if (*index == num) {
+            return index;
+        }
+    }
+}
+
+int main()
+{
+    int arr[]{ 2, 5, 4, 10, 8, 16, 40 };
+
+    // Search for the first element with value 20.
+    int* found{ findValue(std::begin(arr), std::end(arr), 20) };
+
+    // If an element with value 20 was found, print it.
+    if (found != std::end(arr))
+    {
+        std::cout << *found << '\n';
+    }
+
+    return 0;
+}
+```
+
+## 11.9 — C-style string symbolic constants
+
+### C-style string symbolic constants
+
+In a previous lesson, we discussed how you could create and initialize a C-style string, like this:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    char myName[]{ "Alex" }; // fixed array
+    std::cout << myName << '\n';
+
+    return 0;
+}
+```
+
+C++ also supports a way to create C-style string symbolic constants using pointers:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    const char* myName{ "Alex" }; // pointer to string literal
+    std::cout << myName << '\n';
+
+    return 0;
+}
+```
+
+While these above two programs operate and produce the same results, C++ deals with the memory allocation for these slightly differently.
+
+In the string literal case, how the compiler handles this is implementation defined. What usually happens is that the compiler places the string “Alex\0” into read-only memory somewhere, and then sets the pointer to point to it. Because string literals can’t be changed, the string must be const.
+
+For optimization purposes, multiple string literals may be consolidated into a single value. For example:
+
+```cpp
+const char* name1{ "Alex" }; // point to the same address
+const char* name2{ "Alex" }; // point to the same address
+```
+
+These are two different string literals with the same value. Because these literals are constants, the compiler may opt to save memory by combining these into a single shared string literal, with both name1 and name2 **pointed at the same address**.
+
+As a result of string literals being stored in a fixed location in memory, string literals have **static duration** rather than automatic duration (that is, they die at the end of the program, not the end of the block in which they are defined). That means that when we use string literals, we don’t have to worry about scoping issues. Thus, the following is okay:
+
+```cpp
+const char* getName()
+{
+    return "Alex";
+}
+```
+
+In the above code, `getName()` will return a pointer to C-style string “Alex”. If this function were returning any other local variable by address, the variable would be destroyed at the end of `getName()`, and we’d return a dangling pointer back to the caller. However, because string literals have static duration, “Alex” will not be destroyed when `getName()` terminates, so the caller can still successfully access it.
+
+C-style strings are used in a lot of old or low-level code, because they have a very small memory footprint. Modern code should favor the use `std::string` and `std::string_view`, as those provide safe and easy access to the string.
+
+### std::cout and char pointers
+
+At this point, you may have noticed something interesting about the way std::cout handles pointers of different types. Consider the following example:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int nArray[5]{ 9, 7, 5, 3, 1 };
+    char cArray[]{ "Hello!" };
+    const char* name{ "Alex" };
+
+    std::cout << nArray << '\n'; // nArray will decay to type int*
+    std::cout << cArray << '\n'; // cArray will decay to type char*
+    std::cout << name << '\n'; // name is already type char*
+
+    return 0;
+}
+```
+
+On the author’s machine, this printed:
+
+```
+003AF738
+Hello!
+Alex
+```
+
+Why did the int array print an address, but the character arrays printed strings?
+
+The answer is that `std::cout` makes some assumptions about your intent. If you pass it a non-char pointer, it will simply print the contents of that pointer (the address that the pointer is holding). However, if you pass it an object of type `char*` or `const char*`, it will assume you’re intending to print a string. Consequently, instead of printing the pointer’s value, it will print the string being pointed to instead!
+
+While this is great 99% of the time, it can lead to unexpected results. Consider the following case:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    char c{ 'Q' };
+    std::cout << &c;
+
+    return 0;
+}
+```
+
+In this case, the programmer is intending to print the address of variable c. However, &c has type char\*, so std::cout tries to print this as a string! On the author’s machine, this printed:
+
+```
+Q╠╠╠╠╜╡4;¿■A
+```
+
+Why did it do this? Well, it assumed &c (which has type char\*) was a string. So it printed the ‘Q’, and then kept going. Next in memory was a bunch of garbage. Eventually, it ran into some memory holding a 0 value (null terminator), which it interpreted as a null terminator, so it stopped. What you see may be different depending on what’s in memory after variable c.
+
+## 11.10 — Dynamic memory allocation with new and delete
+
+C++ supports three basic types of memory allocation, of which you’ve already seen two.
+
+-   **Static memory allocation** happens for static and global variables. Memory for these types of variables is allocated once when your program is run and persists throughout the life of your program.
+-   **Automatic memory allocation** happens for function parameters and local variables. Memory for these types of variables is allocated when the relevant block is entered, and freed when the block is exited, as many times as necessary.
+-   **Dynamic memory allocation** is the topic of this article.
+
+Both static and automatic allocation have two things in common:
+
+-   The size of the variable / array must be known at compile time.
+-   Memory allocation and deallocation happens automatically (when the variable is instantiated / destroyed).
+
+Most of the time, this is just fine. However, you will come across situations where one or both of these constraints cause problems, usually when dealing with external (user or file) input.
+
+For example, we may want to use a string to hold someone’s name, but we do not know how long their name is until they enter it. Or we may want to read in a number of records from disk, but we don’t know in advance how many records there are. Or we may be creating a game, with a variable number of monsters (that changes over time as some monsters die and new ones are spawned) trying to kill the player.
+
+Fortunately, these problems are easily addressed via dynamic memory allocation. **Dynamic memory allocation** is a way for running programs to request memory from the operating system when needed. This memory does not come from the program’s limited stack memory -- instead, it is allocated from a much larger pool of memory managed by the operating system called the **heap**. On modern machines, the heap can be gigabytes in size.
+
+### Dynamically allocating single variables
+
+To allocate a single variable dynamically, we use the scalar (non-array) form of the new operator:
+
+```cpp
+new int; // dynamically allocate an integer (and discard the result)
+```
+
+In the above case, we’re requesting an integer’s worth of memory from the operating system. The new operator creates the object using that memory, and then **returns a pointer** containing the address of the memory that has been allocated.
+
+```cpp
+int* ptr{ new int }; // dynamically allocate an integer and assign the address to ptr so we can access it later
+*ptr = 7; // assign value of 7 to allocated memory
+```
+
+Note that accessing heap-allocated objects is generally slower than accessing stack-allocated objects. Because the compiler knows the address of stack-allocated objects, it can go directly to that address to get a value. Heap allocated objects are typically accessed via pointer. This requires two steps: one to get the address of the object (from the pointer), and another to get the value.
+
+### How does dynamic memory allocation work?
+
+The allocation and deallocation for stack objects is done automatically. There is no need for us to deal with memory addresses -- the code the compiler writes can do this for us.
+
+The allocation and deallocation for heap objects **is not done automatically**. We need to be involved. That means we need some unambiguous way to refer to a specific heap allocated object, so that we can request its destruction when we’re ready. And the way we reference such objects is via memory address.
+
+When we use operator new, it returns a pointer containing the memory address of the newly allocated object. We generally want to store that in a pointer so we can use that address later to access the object (and eventually, request its destruction).
+
+### Initializing a dynamically allocated variable
+
+```cpp
+int* ptr1{ new int (5) }; // use direct initialization
+int* ptr2{ new int { 6 } }; // use uniform initialization
+```
+
+### Deleting a single variable
+
+When we are done with a dynamically allocated variable, we need to explicitly tell C++ to free the memory for reuse. For single variables, this is done via the scalar (non-array) form of the **delete** operator:
+
+```cpp
+// assume ptr has previously been allocated with operator new
+delete ptr; // return the memory pointed to by ptr to the operating system
+ptr = nullptr; // set ptr to be a null pointer
+```
+
+### What does it mean to delete memory?
+
+The delete operator does not actually delete anything. It simply returns the memory being pointed to back to the operating system. The operating system is then free to reassign that memory to another application (or to this application again later).
+
+Although it looks like we’re deleting a variable, this is not the case! The pointer variable still has the same scope as before, and can be assigned a new value just like any other variable.
+
+Note that deleting a pointer that is not pointing to dynamically allocated memory may cause bad things to happen.
+
+### Dangling pointers
+
+C++ does not make any guarantees about what will happen to the contents of deallocated memory, or to the value of the pointer being deleted. In most cases, the memory returned to the operating system will contain the same values it had before it was returned, and the pointer will be left pointing to the now deallocated memory.
+
+A pointer that is pointing to deallocated memory is called a **dangling pointer**. Dereferencing or deleting a dangling pointer will lead to undefined behavior. Consider the following program:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int* ptr{ new int }; // dynamically allocate an integer
+    *ptr = 7; // put a value in that memory location
+
+    delete ptr; // return the memory to the operating system.  ptr is now a dangling pointer.
+
+    std::cout << *ptr; // Dereferencing a dangling pointer will cause undefined behavior
+    delete ptr; // trying to deallocate the memory again will also lead to undefined behavior.
+
+    return 0;
+}
+```
+
+Deallocating memory may create multiple dangling pointers. Consider the following example:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int* ptr{ new int{} }; // dynamically allocate an integer
+    int* otherPtr{ ptr }; // otherPtr is now pointed at that same memory location
+
+    delete ptr; // return the memory to the operating system.  ptr and otherPtr are now dangling pointers.
+    ptr = nullptr; // ptr is now a nullptr
+
+    // however, otherPtr is still a dangling pointer!
+
+    return 0;
+}
+```
+
+There are a few best practices that can help here.
+
+-   First, try to avoid having multiple pointers point at the same piece of dynamic memory. If this is not possible, be clear about which pointer “owns” the memory (and is responsible for deleting it) and which pointers are just accessing it.
+-   Second, when you delete a pointer, if that pointer is not going out of scope immediately afterward, set the pointer to nullptr. We’ll talk more about null pointers, and why they are useful in a bit.
+
+### Operator new can fail
+
+When requesting memory from the operating system, in rare circumstances, the operating system may not have any memory to grant the request with. if `new` fails, a `bad_alloc` exception is thrown, so there’s an alternate form of new that can be used instead to tell new to return a **null pointer** if memory can’t be allocated. This is done by adding the constant `std::nothrow` between the new keyword and the allocation type:
+
+```cpp
+int* value { new (std::nothrow) int }; // value will be set to a null pointer if the integer allocation fails
+```
+
+Consequently, the best practice is to check all memory requests to ensure they actually succeeded before using the allocated memory.
+
+```cpp
+int* value { new (std::nothrow) int{} }; // ask for an integer's worth of memory
+if (!value) // handle case where new returned null
+{
+    // Do error handling here
+    std::cerr << "Could not allocate memory\n";
+}
+```
+
+Because asking new for memory only fails rarely (and almost never in a dev environment), it’s common to forget to do this check!
+
+### Null pointers and dynamic memory allocation
+
+In the context of dynamic memory allocation, a null pointer basically says “no memory has been allocated to this pointer”
+
+```cpp
+// If ptr isn't already allocated, allocate it
+if (!ptr)
+    ptr = new int;
+```
+
+Deleting a null pointer has no effect. just write:
+
+```cpp
+delete ptr;
+```
+
+If ptr is non-null, the dynamically allocated variable will be deleted. If it is null, nothing will happen
+
+### Memory leaks
+
+Dynamically allocated memory stays allocated until it is explicitly deallocated or until the program ends (and the operating system cleans it up, assuming your operating system does that). However, the pointers used to hold dynamically allocated memory addresses follow the normal scoping rules for local variables. This mismatch can create interesting problems.
+
+Consider the following function:
+
+```cpp
+void doSomething()
+{
+    int* ptr{ new int{} };
+}
+```
+
+This function allocates an integer dynamically, but never frees it using delete. Because pointers variables are just normal variables, when the function ends, ptr will go out of scope. And because ptr is the only variable holding the address of the dynamically allocated integer, when ptr is destroyed there are no more references to the dynamically allocated memory. This means the program has now “lost” the address of the dynamically allocated memory. As a result, this dynamically allocated integer can not be deleted.
+
+This is called a memory leak. **Memory leaks** happen when your program loses the address of some bit of dynamically allocated memory before giving it back to the operating system. When this happens, your program can’t delete the dynamically allocated memory, because it no longer knows where it is. The operating system also can’t use this memory, because that memory is considered to be still in use by your program.
+
+Memory leaks eat up free memory while the program is running, making less memory available not only to this program, but to other programs as well. Programs with severe memory leak problems can eat all the available memory, causing the entire machine to run slowly or even crash. Only after your program terminates is the operating system able to clean up and “reclaim” all leaked memory.
+
+Although memory leaks can result from a pointer going out of scope, there are other ways that memory leaks can result. For example, a memory leak can occur if a pointer holding the address of the dynamically allocated memory is assigned another value:
+
+```cpp
+int value = 5;
+int* ptr{ new int{} }; // allocate memory
+ptr = &value; // assign other address, old address lost, memory leak results
+```
+
+This can be fixed by deleting the pointer before reassigning it:
+
+```cpp
+int value{ 5 };
+int* ptr{ new int{} }; // allocate memory
+delete ptr; // return memory back to operating system
+ptr = &value; // reassign pointer to address of value
+```
+
+Relatedly, it is also possible to get a memory leak via double-allocation:
+
+```cpp
+int* ptr{ new int{} };
+ptr = new int{}; // old address lost, memory leak results
+```
+
+The address returned from the second allocation overwrites the address of the first allocation. Consequently, the first allocation becomes a memory leak!
+
+Similarly, this can be avoided by ensuring you delete the pointer before reassigning.
+
+## 11.11 — Dynamically allocating arrays
+
+Unlike a fixed array, where the array size must be fixed at compile time, **dynamically allocating an array** allows us to choose an array length at runtime (meaning our length does not need to be `constexpr`).
+
+To allocate an array dynamically, we use the array form of new and delete (often called `new[]` and `delete[]`):
+
+```cpp
+#include <cstddef>
+#include <iostream>
+
+int main()
+{
+    std::cout << "Enter a positive integer: ";
+    std::size_t length{};
+    std::cin >> length;
+
+    int* array{ new int[length]{} }; // use array new.  Note that length does not need to be constant!
+
+    std::cout << "I just allocated an array of integers of length " << length << '\n';
+
+    array[0] = 5; // set element 0 to value 5
+
+    delete[] array; // use array delete to deallocate array
+
+    // we don't need to set array to nullptr/0 here because it's going out of scope immediately after this anyway
+
+    return 0;
+}
+```
+
+The length of dynamically allocated arrays has type `std::size_t`. If you are using a non-constexpr int, you’ll need to `static_cast` to `std::size_t` since that is considered a narrowing conversion and your compiler will warn otherwise.
+
+Note that because this memory is allocated from a different place than the memory used for fixed arrays, the size of the array can be quite large. You can run the program above and allocate an array of length 1,000,000 (or probably even 100,000,000) without issue. Try it! Because of this, programs that need to allocate a lot of memory in C++ typically do so dynamically.
+
+### Dynamically deleting arrays
+
+When deleting a dynamically allocated array, we have to use the array version of delete, which is delete[].
+
+One often asked question of array delete[] is, “How does array delete know how much memory to delete?” The answer is that array new[] keeps track of how much memory was allocated to a variable, so that array delete[] can delete the proper amount. Unfortunately, this size/length isn’t accessible to the programmer.
+
+### Dynamic arrays are almost identical to fixed arrays
+
+In lesson 11.7 -- Pointers and arrays, you learned that a fixed array holds the memory address of the first array element. You also learned that a fixed array can decay into a pointer that points to the first element of the array. In this decayed form, the length of the fixed array is not available (and therefore neither is the size of the array via sizeof()), but otherwise there is little difference.
+
+A dynamic array starts its life as a pointer that points to the first element of the array. Consequently, it has the same limitations in that it doesn’t know its length or size. **A dynamic array functions identically to a decayed fixed array**, with the exception that the programmer is responsible for deallocating the dynamic array via the delete[] keyword.
+
+### Initializing dynamically allocated arrays
+
+If you want to initialize a dynamically allocated array to 0, the syntax is quite simple:
+
+```cpp
+int* array{ new int[length]{} };
+```
+
+starting with **C++11**, it’s now possible to initialize dynamic arrays using initializer lists!
+
+```cpp
+int fixedArray[5] = { 9, 7, 5, 3, 1 }; // initialize a fixed array before C++11
+int* array{ new int[5]{ 9, 7, 5, 3, 1 } }; // initialize a dynamic array since C++11
+// To prevent writing the type twice, we can use auto. This is often done for types with long names.
+auto* array{ new int[5]{ 9, 7, 5, 3, 1 } };
+```
+
+Note that this syntax has no `operator=` between the array length and the initializer list.
+
+### Resizing arrays
+
+Dynamically allocating an array allows you to set the array length at the time of allocation. However, C++ does not provide a built-in way to resize an array that has already been allocated. It is possible to work around this limitation by dynamically allocating a new array, copying the elements over, and deleting the old array. However, this is error prone, especially when the element type is a class (which have special rules governing how they are created).
+
+Consequently, we recommend avoiding doing this yourself.
+
+Fortunately, if you need this capability, C++ provides a resizable array as part of the standard library called `std::vector`. We’ll introduce `std::vector` shortly.
+
+## 11.12 — For-each loops
+
+### For-each loops
+
+syntax:
+
+```
+for (element_declaration : array)
+   statement;
+```
+
+### For each loops and the auto keyword
+
+Because element_declaration should have the same type as the array elements, this is an ideal case in which to use the auto keyword, and let C++ deduce the type of the array elements for us.
+
+Here’s the above example, using auto:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    constexpr int fibonacci[]{ 0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89 };
+    for (auto number : fibonacci) // type is auto, so number has its type deduced from the fibonacci array
+    {
+       std::cout << number << ' ';
+    }
+
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+### For-each loops and references
+
+In the following for-each example, our element declarations are declared by value:
+
+```cpp
+std::string array[]{ "peter", "likes", "frozen", "yogurt" };
+for (auto element : array) // element will be a copy of the current array element
+{
+    std::cout << element << ' ';
+}
+```
+
+This means each array element iterated over will be copied into variable element. Copying array elements can be expensive, and most of the time we really just want to refer to the original element. Fortunately, we can use references for this:
+
+```cpp
+std::string array[]{ "peter", "likes", "frozen", "yogurt" };
+for (auto& element: array) // The ampersand makes element a reference to the actual array element, preventing a copy from being made
+{
+    std::cout << element << ' ';
+}
+```
+
+In the above example, element will be a reference to the currently iterated array element, avoiding having to make a copy. Also any changes to element will affect the array being iterated over, something not possible if element is a normal variable.
+
+And, of course, it’s a good idea to make your reference const if you’re intending to use it in a read-only fashion:
+
+```cpp
+std::string array[]{ "peter", "likes", "frozen", "yogurt" };
+for (const auto& element: array) // element is a const reference to the currently iterated array element
+{
+    std::cout << element << ' ';
+}
+```
+
+### For-each loops and non-arrays
+
+For-each loops don’t only work with fixed arrays, they work with many kinds of list-like structures, such as vectors (e.g. std::vector), linked lists, trees, and maps. We haven’t covered any of these yet, so don’t worry if you don’t know what these are. Just remember that for each loops provide a flexible and generic way to iterate through more than just arrays.
+
+### For-each doesn’t work with pointers to an array
+
+In order to iterate through the array, for-each needs to know how big the array is, which means knowing the array size. Because arrays that have decayed into a pointer do not know their size, for-each loops will not work with them!
+
+```cpp
+#include <iostream>
+
+int sumArray(const int array[]) // array is a pointer
+{
+    int sum{ 0 };
+
+    for (auto number : array) // compile error, the size of array isn't known
+    {
+        sum += number;
+    }
+
+    return sum;
+}
+
+int main()
+{
+     constexpr int array[]{ 9, 7, 5, 3, 1 };
+
+     std::cout << sumArray(array) << '\n'; // array decays into a pointer here
+
+     return 0;
+}
+```
+
+Similarly, dynamic arrays won’t work with for-each loops for the same reason.
+
+### Can I get the index of the current element?
+
+For-each loops do not provide a direct way to get the array index of the current element. This is because many of the structures that for-each loops can be used with (such as linked lists) are not directly indexable!
+
+Since C++20, range-based for-loops can be used with an init-statement just like the init-statement in normal for-loops. We can use the init-statement to create a manual index counter without polluting the function in which the for-loop is placed.
+
+The init-statement is placed right before the loop variable:
+
+```
+for (init-statement; element_declaration : array)
+   statement;
+```
+
+## 11.13 — Void pointers
+
+The **void pointer**, also known as the generic pointer, is a special type of pointer that can be pointed at objects of any data type! A void pointer is declared like a normal pointer, using the void keyword as the pointer’s type:
+
+```cpp
+void* ptr {}; // ptr is a void pointer
+```
+
+A void pointer can point to objects of any data type:
+
+```cpp
+int nValue {};
+float fValue {};
+
+struct Something
+{
+    int n;
+    float f;
+};
+
+Something sValue {};
+
+void* ptr {};
+ptr = &nValue; // valid
+ptr = &fValue; // valid
+ptr = &sValue; // valid
+```
+
+However, because the void pointer does not know what type of object it is pointing to, dereferencing a void pointer is illegal. Instead, the void pointer must first be cast to another pointer type before the dereference can be performed.
+
+```cpp
+int value{ 5 };
+void* voidPtr{ &value };
+
+// std::cout << *voidPtr << '\n'; // illegal: dereference of void pointer
+
+int* intPtr{ static_cast<int*>(voidPtr) }; // however, if we cast our void pointer to an int pointer...
+
+std::cout << *intPtr << '\n'; // then we can dereference the result
+```
+
+This prints:
+
+```cpp
+5
+```
+
+The next obvious question is: If a void pointer doesn’t know what it’s pointing to, how do we know what to cast it to? Ultimately, that is up to you to keep track of.
+
+### Void pointer miscellany
+
+Void pointers can be set to a null value:
+
+```cpp
+void* ptr{ nullptr }; // ptr is a void pointer that is currently a null pointer
+```
+
+Although some compilers allow deleting a void pointer that points to dynamically allocated memory, doing so should be avoided, as it can result in undefined behavior.
+
+It is not possible to do pointer arithmetic on a void pointer. This is because pointer arithmetic requires the pointer to know what size object it is pointing to, so it can increment or decrement the pointer appropriately.
+
+Note that there is no such thing as a void reference. This is because a void reference would be of type void &, and would not know what type of value it referenced.
+
+### Conclusion
+
+In general, it is a good idea to avoid using void pointers unless absolutely necessary
+
+## 11.14 — Pointers to pointers and dynamic multidimensional arrays
+
+### Pointers to pointers
+
+A pointer to a pointer is exactly what you’d expect: a pointer that holds the address of another pointer.
+
+A normal pointer to an int is declared using a single asterisk:
+
+```cpp
+int* ptr; // pointer to an int, one asterisk
+```
+
+A pointer to a pointer to an int is declared using two asterisks
+
+```cpp
+int** ptrptr; // pointer to a pointer to an int, two asterisks
+```
+
+A pointer to a pointer works just like a normal pointer — you can dereference it to retrieve the value pointed to. And because that value is itself a pointer, you can dereference it again to get to the underlying value. These dereferences can be done consecutively:
+
+```cpp
+int value { 5 };
+
+int* ptr { &value };
+std::cout << *ptr << '\n'; // Dereference pointer to int to get int value
+
+int** ptrptr { &ptr };
+std::cout << **ptrptr << '\n'; // dereference to get pointer to int, dereference again to get int value
+```
+
+prints:
+
+```
+5
+5
+```
+
+Note that you can not set a pointer to a pointer directly to a value:
+
+```cpp
+int value { 5 };
+int** ptrptr { &&value }; // not valid
+```
+
+This is because the address of operator (operator&) requires an lvalue, but &value is an rvalue.
+
+However, a pointer to a pointer can be set to null:
+
+```cpp
+int** ptrptr { nullptr };
+```
+
+### Arrays of pointers
+
+Pointers to pointers have a few uses. The most common use is to dynamically allocate an array of pointers:
+
+```cpp
+int** array { new int*[10] }; // allocate an array of 10 int pointers
+```
+
+This works just like a standard dynamically allocated array, except the array elements are of type “pointer to integer” instead of integer.
+
+### Two-dimensional dynamically allocated arrays
+
+This article is complicated. Read on website for detail.
+
+### Passing a pointer by address
+
+### Pointer to a pointer to a pointer to…
+
+## 11.15 — An introduction to std::array
+
+the C++ standard library includes functionality that makes array management easier, `std::array` and `std::vector`. We’ll examine `std::array` in this lesson, and `std::vector` in the next.
+
+### An introduction to std::array
+
+`std::array` provides fixed array functionality that won’t decay when passed into a function. `std::array` is defined in the `<array>` header, inside the `std` namespace.
+
+Declaring a `std::array` variable is easy:
+
+```cpp
+#include <array>
+
+std::array<int, 3> myArray; // declare an integer array with length 3
+std::array<int, 5> myArray2 = { 9, 7, 5, 3, 1 }; // initializer list
+std::array<int, 5> myArray3 { 9, 7, 5, 3, 1 }; // list initialization
+```
+
+Just like the native implementation of fixed arrays, the length of a `std::array` must be known at **compile time**.
+
+Unlike built-in fixed arrays, with std::array you can not omit the array length when providing an initializer:
+
+```cpp
+std::array<int, > myArray { 9, 7, 5, 3, 1 }; // illegal, array length must be provided
+std::array<int> myArray { 9, 7, 5, 3, 1 }; // illegal, array length must be provided
+```
+
+However, since C++17, it is allowed to omit the type and size. They can only be omitted together, but not one or the other, and only if the array is explicitly initialized.
+
+```cpp
+std::array myArray { 9, 7, 5, 3, 1 }; // Since C++17
+std::array<int, 5> myArray { 9, 7, 5, 3, 1 }; // Before C++17
+
+std::array myArray { 9.7, 7.31 }; // Since C++17
+std::array<double, 2> myArray { 9.7, 7.31 }; // Before C++17
+```
+
+Since **C++20**, it is possible to specify the element type but omit the array length. This makes creation of `std::array`
+
+```cpp
+auto myArray1 { std::to_array<int, 5>({ 9, 7, 5, 3, 1 }) }; // Specify type and size
+auto myArray2 { std::to_array<int>({ 9, 7, 5, 3, 1 }) }; // Specify type only, deduce size
+auto myArray3 { std::to_array({ 9, 7, 5, 3, 1 }) }; // Deduce type and size
+```
+
+Unfortunately, `std::to_array` is more expensive than creating a `std::array` directly, because it actually copies all elements from a C-style array to a `std::array`. For this reason, `std::to_array` should be avoided when the array is created many times (e.g. in a loop).
+
+You can also assign values to the array using an initializer list
+
+```cpp
+std::array<int, 5> myArray;
+myArray = { 0, 1, 2, 3, 4 }; // okay
+myArray = { 9, 8, 7 }; // okay, elements 3 and 4 are set to zero!
+myArray = { 0, 1, 2, 3, 4, 5 }; // not allowed, too many elements in initializer list!
+```
+
+Accessing `std::array` values using the subscript operator works just like you would expect:
+
+```cpp
+std::cout << myArray[1] << '\n';
+myArray[2] = 6;
+```
+
+Just like built-in fixed arrays, the subscript operator does not do any bounds-checking. If an invalid index is provided, bad things will probably happen.
+
+`std::array` supports a second form of array element access (the `at()` function) that does (runtime) bounds checking:
+
+```cpp
+std::array myArray { 9, 7, 5, 3, 1 };
+myArray.at(1) = 6; // array element 1 is valid, sets array element 1 to value 6
+myArray.at(9) = 10; // array element 9 is invalid, will throw a runtime error
+```
+
+### Size and sorting
+
+The `size()` function can be used to retrieve the length of the `std::array`:
+
+```cpp
+std::array myArray { 9.0, 7.2, 5.4, 3.6, 1.8 };
+std::cout << "length: " << myArray.size() << '\n';
+```
+
+This prints:
+
+```
+length: 5
+```
+
+Because `std::array` **doesn’t decay to a pointer when passed to a function**, the `size()` function will work even if you call it from within a function:
+
+```cpp
+#include <array>
+#include <iostream>
+
+void printLength(const std::array<double, 5>& myArray)
+{
+    std::cout << "length: " << myArray.size() << '\n';
+}
+
+int main()
+{
+    std::array myArray { 9.0, 7.2, 5.4, 3.6, 1.8 };
+
+    printLength(myArray);
+
+    return 0;
+}
+```
+
+This prints:
+
+```
+length: 5
+```
+
+Also note that we passed `std::array` by **const reference**. This is to prevent the compiler from making a copy of the `std::array` when the `std::array` was passed to the function (for performance reasons).
+Always pass `std::array` by reference or `const` reference
+
+Because the **length** is always known, range-based for-loops work with `std::array`:
+
+```cpp
+std::array myArray{ 9, 7, 5, 3, 1 };
+
+for (int element : myArray)
+    std::cout << element << ' ';
+```
+
+You can sort `std::array` using `std::sort`, which lives in the `<algorithm>` header:
+
+```cpp
+#include <algorithm> // for std::sort
+#include <array>
+#include <iostream>
+
+int main()
+{
+    std::array myArray { 7, 3, 1, 9, 5 };
+    std::sort(myArray.begin(), myArray.end()); // sort the array forwards
+//  std::sort(myArray.rbegin(), myArray.rend()); // sort the array backwards
+
+    for (int element : myArray)
+        std::cout << element << ' ';
+
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+### Passing std::array of different lengths to a function
+
+```cpp
+#include <array>
+#include <cstddef>
+#include <iostream>
+
+// printArray is a template function
+template <typename T, std::size_t size> // parameterize the element type and size
+void printArray(const std::array<T, size>& myArray)
+{
+    for (auto element : myArray)
+        std::cout << element << ' ';
+    std::cout << '\n';
+}
+
+int main()
+{
+    std::array myArray5{ 9.0, 7.2, 5.4, 3.6, 1.8 };
+    printArray(myArray5);
+
+    std::array myArray7{ 9.0, 7.2, 5.4, 3.6, 1.8, 1.2, 0.7 };
+    printArray(myArray7);
+
+    return 0;
+}
+```
+
+Take a look at **Template argument deduction** to learn how `std::size_t size` work
+
+### Manually indexing std::array via size_type
+
+the correct way to indexing `std::array` is as follows:
+
+```cpp
+#include <array>
+#include <iostream>
+
+int main()
+{
+    std::array myArray { 7, 3, 1, 9, 5 };
+
+    // std::array<int, 5>::size_type is the return type of size()!
+    for (std::array<int, 5>::size_type i{ 0 }; i < myArray.size(); ++i)
+        std::cout << myArray[i] << ' ';
+
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+That’s not very readable. Fortunately, `std::array::size_type` is just an alias for `std::size_t`, so we can use that instead.
+
+```cpp
+#include <array>
+#include <cstddef> // std::size_t
+#include <iostream>
+
+int main()
+{
+    std::array myArray { 7, 3, 1, 9, 5 };
+
+    for (std::size_t i{ 0 }; i < myArray.size(); ++i)
+        std::cout << myArray[i] << ' ';
+
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+Keep in mind that unsigned integers wrap around when you reach their limits. A common mistake is to decrement an index that is 0 already, causing a wrap-around to the maximum value. You saw this in the lesson about for-loops, but let’s repeat.
+
+```cpp
+#include <array>
+#include <iostream>
+
+int main()
+{
+    std::array myArray { 7, 3, 1, 9, 5 };
+
+    // Print the array in reverse order.
+    // We can use auto, because we're not initializing i with 0.
+    // Bad:
+    for (auto i{ myArray.size() - 1 }; i >= 0; --i)
+        std::cout << myArray[i] << ' ';
+
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+This is an infinite loop, producing undefined behavior once `i` wraps around.
+
+A working reverse for-loop for unsigned integers takes an odd shape:
+
+```cpp
+#include <array>
+#include <iostream>
+
+int main()
+{
+    std::array myArray { 7, 3, 1, 9, 5 };
+
+    // Print the array in reverse order.
+    for (auto i{ myArray.size() }; i-- > 0; )
+        std::cout << myArray[i] << ' ';
+
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+### Array of struct
+
+```cpp
+#include <array>
+#include <iostream>
+
+struct House
+{
+    int number{};
+    int stories{};
+    int roomsPerStory{};
+};
+
+int main()
+{
+    std::array<House, 3> houses{};
+
+    houses[0] = { 13, 4, 30 };
+    houses[1] = { 14, 3, 10 };
+    houses[2] = { 15, 3, 40 };
+
+    for (const auto& house : houses)
+    {
+        std::cout << "House number " << house.number
+                  << " has " << (house.stories * house.roomsPerStory)
+                  << " rooms\n";
+    }
+
+    return 0;
+}
+```
+
+The above outputs the following:
+
+```
+House number 13 has 120 rooms
+House number 14 has 30 rooms
+House number 15 has 120 rooms
+```
+
+However, things get a little weird when we try to initialize an array whose element type requires a list of values (such as a `std::array` of struct). You might try to initialize such a `std::array` like this:
+
+```cpp
+// Doesn't work.
+std::array<House, 3> houses {
+    { 13, 4, 30 },
+    { 14, 3, 10 },
+    { 15, 3, 40 }
+};
+```
+
+But this doesn’t work.
+
+A `std::array` is defined as a struct that contains a C-style array member (whose name is implementation defined). So when we try to initialize `houses` per the above, the compiler interprets the initialization like this:
+
+```cpp
+// Doesn't work.
+std::array<House, 3> houses { // initializer for houses
+    { 13, 4, 30 }, // initializer for the C-style array member inside the std::array struct
+    { 14, 3, 10 }, // ?
+    { 15, 3, 40 }  // ?
+};
+```
+
+The compiler will interpret { 13, 4, 30 } as the initializer for the entire array. This has the effect of initializing the struct with index 0 with those values, and zero-initializing the rest of the struct elements. Then the compiler will discover we’ve provided two more initialization values ({ 14, 3, 10 } and { 15, 3, 40 }) and produce a compilation error telling us that we’ve provided too many initialization values.
+
+The correct way to initialize the above is to add an extra set of braces as follows:
+
+```cpp
+// This works as expected
+std::array<House, 3> houses { // initializer for houses
+    { // extra set of braces to initialize the C-style array member inside the std::array struct
+        { 13, 4, 30 }, // initializer for array element 0
+        { 14, 3, 10 }, // initializer for array element 1
+        { 15, 3, 40 }, // initializer for array element 2
+     }
+};
+```
+
+Note the extra set of braces that are required (to begin initialization of the C-style array member inside the std::array struct). Within those braces, we can then initialize each element individually, each inside its own set of braces.
+
+This is why you’ll see `std::array` initializers with an extra set of braces when the element type requires a list of values.
+
+## 11.16 — An introduction to std::vector
+
+### An introduction to std::vector
+
+Introduced in C++03, `std::vector` provides dynamic array functionality that handles its own memory management. This means you can create arrays that have their length set at run-time, without having to explicitly allocate and deallocate memory using `new` and `delete`. `std::vector` lives in the `<vector>` header.
+
+```cpp
+#include <vector>
+
+// no need to specify length at the declaration
+std::vector<int> v;
+std::vector<int> v2 = { 9, 7, 5, 3, 1 }; // use initializer list to initialize vector (before C++11)
+std::vector<int> v3 { 9, 7, 5, 3, 1 }; // use uniform initialization to initialize vector
+
+// as with std::array, the type can be omitted since C++17
+std::vector v4 { 9, 7, 5, 3, 1 }; // deduced to std::vector<int>
+```
+
+Note that in both the uninitialized and initialized case, **you do not need to include the array length at compile time**. This is because `std::vector` will dynamically allocate memory for its contents as requested.
+
+Just like `std::array`, accessing array elements can be done via the `[]` operator (which does no bounds checking) or the `at()` function (which does bounds checking at runtime):
+
+```cpp
+v[6] = 2; // no bounds checking
+v.at(7) = 3; // does bounds checking
+```
+
+As of C++11, you can also assign values to a std::vector using an initializer-list:
+
+```cpp
+v = { 0, 1, 2, 3, 4 }; // okay, vector length is now 5
+v = { 9, 8, 7 }; // okay, vector length is now 3
+```
+
+In this case, the vector will self-resize to match the number of elements provided.
+
+### Self-cleanup prevents memory leaks
+
+When a vector variable goes out of scope, it automatically deallocates the memory it controls (if necessary). This is not only handy (as you don’t have to do it yourself), it also helps prevent memory leaks
+
+### Vectors remember their length
+
+Unlike built-in dynamic arrays, which don’t know the length of the array they are pointing to, `std::vector` keeps track of its length. We can ask for the vector’s length via the si`ze()` member function:
+
+```cpp
+#include <iostream>
+#include <vector>
+
+void printLength(const std::vector<int>& v)
+{
+    std::cout << "The length is: " << v.size() << '\n';
+}
+
+int main()
+{
+    std::vector v{ 9, 7, 5, 3, 1 };
+    printLength(v);
+
+    std::vector<int> empty {};
+    printLength(empty);
+
+    return 0;
+}
+```
+
+The above example prints:
+
+```
+The length is: 5
+The length is: 0
+```
+
+Just like with `std::array`, size() returns a value of nested type `size_type` (full type in the above example would be `std::vector<int>::size_type`), which is an unsigned integer.
+
+### Resizing a vector
+
+Resizing a built-in dynamically allocated array is complicated. Resizing a `std::vector` is as simple as calling the `resize()` function:
+
+```cpp
+#include <iostream>
+#include <vector>
+
+int main()
+{
+    std::vector v{ 0, 1, 2 };
+    v.resize(5); // set size to 5
+
+    std::cout << "The length is: " << v.size() << '\n';
+
+    for (int i : v)
+        std::cout << i << ' ';
+
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+This prints:
+
+```
+The length is: 5
+0 1 2 0 0
+```
+
+There are two things to note here. First, when we resized the vector, the existing element values were preserved! Second, new elements are initialized to the default value for the type (which is 0 for integers).
+
+Vectors may be resized to be smaller:
+
+```cpp
+#include <vector>
+#include <iostream>
+
+int main()
+{
+    std::vector v{ 0, 1, 2, 3, 4 };
+    v.resize(3); // set length to 3
+
+    std::cout << "The length is: " << v.size() << '\n';
+
+    for (int i : v)
+        std::cout << i << ' ';
+
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+This prints:
+
+```
+The length is: 3
+0 1 2
+```
+
+### Initializing a vector to a specific size
+
+When initializing a vector:
+
+-   Use brace initialization when you want to initialize the vector with specific values.
+-   Use parenthesis initialization when you want to initialize the vector to a specific size (the values will be value initialized).
+
+```cpp
+std::vector a { 1, 2, 3 }; // allocate 3 elements with values 1, 2, and 3
+std::vector b { 3 }; // allocate 1 element with value 3
+std::vector<int> c ( 3 ); // allocate 3 elements with values 0, 0, and 0
+std::vector<int> d ( 3, 4 ); // allocate 3 elements with values 4, 4, and 4
+```
+
+We’ll talk about why direct and brace-initialization are treated differently in lesson 16.7 -- std::initializer_list. As a rule of thumb, if a type is some kind of list, and you don’t want to initialize the object with a list of values, use direct initialization.
+
+### Compacting bools
+
+`std::vector` has another cool trick up its sleeves. There is a special implementation for `std::vector` of type bool that will **compact 8 booleans into a byte**! This happens behind the scenes, and doesn’t change how you use the `std::vector`.
+
+```cpp
+#include <vector>
+#include <iostream>
+
+int main()
+{
+    std::vector<bool> v{ true, false, false, true, true };
+    std::cout << "The length is: " << v.size() << '\n';
+
+    for (int i : v)
+        std::cout << i << ' ';
+
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+This prints:
+
+```
+The length is: 5
+1 0 0 1 1
+```
+
+### It’s okay to return a std::vector by value
+
+Returning a C-style array or std::array by value is generally discouraged, because doing so makes an expensive copy of the entire array.
+
+Perhaps surprisingly, it’s fine to return a std::vector by value. Doing so will not make a copy of the vector. Instead, the contents of the vector being returned will be transferred to the object being initialized or assigned with the return value. The cost of this transfer is trivial.
+
+For example:
+
+```cpp
+#include <iostream>
+#include <vector>
+
+std::vector<int> generate() // return by value
+{
+    return std::vector<int> { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+}
+
+int main()
+{
+    std::vector v { generate() }; // the contents of the returned vector will be transferred into v
+
+    for (auto e: v)
+        std::cout << e << ' ';
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+This prints:
+
+```
+1 2 3 4 5 6 7 8 9 10
+```
+
+The ability for class types to transfer resources is enabled by a neat feature introduced in C++11 called “move semantics”. We discuss move semantics further in lesson M.1 -- Introduction to smart pointers and move semantics.
+
+### More to come
+
+Note that this is an introduction article intended to introduce the basics of `std::vector`. In lesson 12.3 -- std::vector capacity and stack behavior, we’ll cover some additional capabilities of `std::vector`, including the difference between a vector’s length and capacity, and take a deeper look into how `std::vector` handles memory allocation.
+
+## 11.17 — Introduction to iterators
+
+Iterating through an array (or other structure) of data is quite a common thing to do in programming. And so far, we’ve covered many different ways to do so: with loops and an index (`for-loops` and `while loops`), with pointers and pointer arithmetic, and with `range-based for-loops`:
+
+```cpp
+#include <array>
+#include <cstddef>
+#include <iostream>
+
+int main()
+{
+    // In C++17, the type of variable data is deduced to std::array<int, 7>
+    // If you get an error compiling this example, see the warning below
+    std::array data{ 0, 1, 2, 3, 4, 5, 6 };
+    std::size_t length{ std::size(data) };
+
+    // while-loop with explicit index
+    std::size_t index{ 0 };
+    while (index < length)
+    {
+        std::cout << data[index] << ' ';
+        ++index;
+    }
+    std::cout << '\n';
+
+    // for-loop with explicit index
+    for (index = 0; index < length; ++index)
+    {
+        std::cout << data[index] << ' ';
+    }
+    std::cout << '\n';
+
+    // for-loop with pointer (Note: ptr can't be const, because we increment it)
+    for (auto ptr{ &data[0] }; ptr != (&data[0] + length); ++ptr)
+    {
+        std::cout << *ptr << ' ';
+    }
+    std::cout << '\n';
+
+    // range-based for loop
+    for (int i : data)
+    {
+        std::cout << i << ' ';
+    }
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+### Iterators
+
+An **iterator** is an object designed to traverse through a container (e.g. the values in an array, or the characters in a string), providing access to each element along the way.
+
+A container may provide different kinds of iterators. For example, an array container might offer a forwards iterator that walks through the array in forward order, and a reverse iterator that walks through the array in reverse order.
+
+Once the appropriate type of iterator is created, the programmer can then use the interface provided by the iterator to traverse and access elements without having to worry about what kind of traversal is being done or how the data is being stored in the container. And because C++ iterators typically use the same interface for traversal (operator++ to move to the next element) and access (operator\* to access the current element), we can iterate through a wide variety of different container types using a consistent method.
+
+### Pointers as an iterator
+
+```cpp
+#include <array>
+#include <iostream>
+
+int main()
+{
+    std::array data{ 0, 1, 2, 3, 4, 5, 6 };
+
+    auto begin{ &data[0] };
+    // note that this points to one spot beyond the last element
+    auto end{ begin + std::size(data) };
+
+    // for-loop with pointer
+    for (auto ptr{ begin }; ptr != end; ++ptr) // ++ to move to next element
+    {
+        std::cout << *ptr << ' '; // Indirection to get value of current element
+    }
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+### Standard library iterators
+
+Iterating is such a common operation that all standard library containers offer direct support for iteration. Instead of calculating our own begin and end points, we can simply ask the container for the begin and end points via member functions conveniently named `begin()` and `end()`:
+
+```cpp
+#include <array>
+#include <iostream>
+
+int main()
+{
+    std::array array{ 1, 2, 3 };
+
+    // Ask our array for the begin and end points (via the begin and end member functions).
+    auto begin{ array.begin() };
+    auto end{ array.end() };
+
+    for (auto p{ begin }; p != end; ++p) // ++ to move to next element.
+    {
+        std::cout << *p << ' '; // Indirection to get value of current element.
+    }
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+The `<iterator>` header also contains two generic functions (`std::begin` and `std::end`) that can be used.
+
+`std::begin` and `std::end` for C-style arrays are defined in the `<iterator>` header.
+
+`std::begin` and `std::end` for containers that support iterators are defined in the header files for those containers (e.g. `<array>`, `<vector>`).
+
+```cpp
+#include <array>    // includes <iterator>
+#include <iostream>
+
+int main()
+{
+    std::array array{ 1, 2, 3 };
+
+    // Use std::begin and std::end to get the begin and end points.
+    auto begin{ std::begin(array) };
+    auto end{ std::end(array) };
+
+    for (auto p{ begin }; p != end; ++p) // ++ to move to next element
+    {
+        std::cout << *p << ' '; // Indirection to get value of current element
+    }
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+Don’t worry about the types of the iterators for now, we’ll re-visit iterators in a later chapter. The important thing is that the iterator takes care of the details of iterating through the container. All we need are four things: the begin point, the end point, `operator++` to move the iterator to the next element (or the end), and `operator*` to get the value of the current element.
+
+### `operator<` vs `operator!=` for iterators
+
+In lesson 7.10 -- For statements, we noted that using operator< was preferred over operator!= when doing numeric comparisons in the loop condition:
+
+```cpp
+for (index = 0; index < length; ++index)
+```
+
+With iterators, it is conventional to use operator!= to test whether the iterator has reached the end element:
+
+```cpp
+for (auto p{ begin }; p != end; ++p)
+```
+
+This is because some iterator types are not relationally comparable. operator!= works with all iterator types.
+
+### Back to range-based for loops
+
+All types that have both `begin()` and `end()` member functions, or that can be used with `std::begin()` and `std::end()`, are usable in range-based for-loops.
+
+```cpp
+#include <array>
+#include <iostream>
+
+int main()
+{
+    std::array array{ 1, 2, 3 };
+
+    // This does exactly the same as the loop we used before.
+    for (int i : array)
+    {
+        std::cout << i << ' ';
+    }
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+Behind the scenes, the range-based for-loop calls `begin()` and `end()` of the type to iterate over. `std::array` has begin and end member functions, so we can use it in a range-based loop. C-style fixed arrays can be used with `std::begin` and `std::end` functions, so we can loop through them with a range-based loop as well. Dynamic C-style arrays (or decayed C-style arrays) don’t work though, because there is no `std::end` function for them (because the type information doesn’t contain the array’s length).
+
+You’ll learn how to add functions to your types later, so that they can be used with range-based for-loops too.
+
+Range-based for-loops aren’t the only thing that makes use of iterators. They’re also used in `std::sort` and other algorithms. Now that you know what they are, you’ll notice they’re used quite a bit in the standard library.
+
+### Iterator invalidation (dangling iterators)
+
+Much like pointers and references, iterators can be left “dangling” if the elements being iterated over change address or are destroyed. When this happens, we say the iterator has been **invalidated**. Accessing an invalidated iterator produces undefined behavior.
+
+Some operations that modify containers (such as adding an element to a `std::vector`) can have the side effect of causing the elements in the container to change addresses. When this happens, existing iterators to those elements will be invalidated. Good C++ reference documentation should note which container operations may or will invalidate iterators. As an example, see the “Iterator invalidation” section of std::vector on cppreference.
+
+## 11.18 — Introduction to standard library algorithms
+
+The functionality provided in the algorithms library generally fall into one of three categories:
+
+-   **Inspectors** -- Used to view (but not modify) data in a container. Examples include searching and counting.
+-   **Mutators** -- Used to modify data in a container. Examples include sorting and shuffling.
+-   **Facilitators** -- Used to generate a result based on values of the data members. Examples include objects that multiply values, or objects that determine what order pairs of elements should be sorted in.
+
+These algorithms live in the algorithms `<library>`. In this lesson, we’ll explore some of the more common algorithms -- but there are many more, and we encourage you to read through the linked reference to see everything that’s available!
+
+Note: All of these make use of iterators, so if you’re not familiar with basic iterators, please review lesson 11.17 -- Introduction to iterators.
+
+## Using std::find to find an element by value
+
+`std::find` searches for the first occurrence of a value in a container. `std::find` takes 3 parameters: an iterator to the starting element in the sequence, an iterator to the ending element in the sequence, and a value to search for. It returns an iterator pointing to the element (if it is found) or the end of the container (if the element is not found).
+
+```cpp
+#include <algorithm>
+#include <array>
+#include <iostream>
+
+int main()
+{
+    std::array arr{ 13, 90, 99, 5, 40, 80 };
+
+    std::cout << "Enter a value to search for and replace with: ";
+    int search{};
+    int replace{};
+    std::cin >> search >> replace;
+
+    // Input validation omitted
+
+    // std::find returns an iterator pointing to the found element (or the end of the container)
+    // we'll store it in a variable, using type inference to deduce the type of
+    // the iterator (since we don't care)
+    auto found{ std::find(arr.begin(), arr.end(), search) };
+
+    // Algorithms that don't find what they were looking for return the end iterator.
+    // We can access it by using the end() member function.
+    if (found == arr.end())
+    {
+        std::cout << "Could not find " << search << '\n';
+    }
+    else
+    {
+        // Override the found element.
+        *found = replace;
+    }
+
+    for (int i : arr)
+    {
+        std::cout << i << ' ';
+    }
+
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+Sample run when the element is found
+
+```
+Enter a value to search for and replace with: 5 234
+13 90 99 234 40 80
+```
+
+Sample run when the element isn’t found
+
+```
+nter a value to search for and replace with: 0 234
+Could not find 0
+13 90 99 5 40 80
+```
+
+### Using std::find_if to find an element that matches some condition
+
+The `std::find_if` function works similarly to `std::find`, but instead of passing in a specific value to search for, we pass in a callable object, such as a function pointer (or a lambda, which we’ll cover later). For each element being iterated over, `std::find_if` will call this function (passing the element as an argument to the function), and the function can return `true` if a match is found, or `false` otherwise.
+
+Here’s an example where we use `std::find_if` to check if any elements contain the substring “nut”:
+
+```cpp
+#include <algorithm>
+#include <array>
+#include <iostream>
+#include <string_view>
+
+// Our function will return true if the element matches
+bool containsNut(std::string_view str)
+{
+    // std::string_view::find returns std::string_view::npos if it doesn't find
+    // the substring. Otherwise it returns the index where the substring occurs
+    // in str.
+    return (str.find("nut") != std::string_view::npos);
+}
+
+int main()
+{
+    std::array<std::string_view, 4> arr{ "apple", "banana", "walnut", "lemon" };
+
+    // Scan our array to see if any elements contain the "nut" substring
+    auto found{ std::find_if(arr.begin(), arr.end(), containsNut) };
+
+    if (found == arr.end())
+    {
+        std::cout << "No nuts\n";
+    }
+    else
+    {
+        std::cout << "Found " << *found << '\n';
+    }
+
+    return 0;
+}
+```
+
+Output
+
+```
+Found walnut
+```
+
+### Using std::count and std::count_if to count how many occurrences there are
+
+`std::count` and `std::count_if` search for all occurrences of an element or an element fulfilling a condition.
+
+In the following example, we’ll count how many elements contain the substring “nut”:
+
+```cpp
+#include <algorithm>
+#include <array>
+#include <iostream>
+#include <string_view>
+
+bool containsNut(std::string_view str)
+{
+	return (str.find("nut") != std::string_view::npos);
+}
+
+int main()
+{
+	std::array<std::string_view, 5> arr{ "apple", "banana", "walnut", "lemon", "peanut" };
+
+	auto nuts{ std::count_if(arr.begin(), arr.end(), containsNut) };
+
+	std::cout << "Counted " << nuts << " nut(s)\n";
+
+	return 0;
+}
+```
+
+Output
+
+```
+Counted 2 nut(s)
+```
+
+### Using std::sort to custom sort
+
+We previously used `std::sort` to sort an array in ascending order, but `std::sort` can do more than that. There’s a version of `std::sort` that takes a function as its third parameter that allows us to sort however we like. The function takes two parameters to compare, and returns true if the first argument should be ordered before the second. By default, `std::sort` sorts the elements in ascending order.
+
+Let’s use `std::sort` to sort an array in reverse order using a custom comparison function named `greater`:
+
+```cpp
+#include <algorithm>
+#include <array>
+#include <iostream>
+
+bool greater(int a, int b)
+{
+    // Order @a before @b if @a is greater than @b.
+    return (a > b);
+}
+
+int main()
+{
+    std::array arr{ 13, 90, 99, 5, 40, 80 };
+
+    // Pass greater to std::sort
+    std::sort(arr.begin(), arr.end(), greater);
+
+    for (int i : arr)
+    {
+        std::cout << i << ' ';
+    }
+
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+Output
+
+```
+99 90 80 40 13 5
+```
+
+Our `greater` function needs 2 arguments, but we’re not passing it any, so where do they come from? When we use a function without parentheses (), it’s only a **function pointer**, not a call. You might remember this from when we tried to print a function without parentheses and `std::cout` printed “1”. `std::sort` uses this pointer and calls the actual `greater` function with any 2 elements of the array. We don’t know which elements `greater` will be called with, because it’s not defined which sorting algorithm `std::sort` is using under the hood. We talk more about function pointers in a later chapter.
+
+Because sorting in descending order is so common, C++ provides a custom type (named `std::greater`) for that too (which is part of the functional header). In the above example, we can replace:
+
+```cpp
+std::sort(arr.begin(), arr.end(), greater); // call our custom greater function
+```
+
+with:
+
+```cpp
+std::sort(arr.begin(), arr.end(), std::greater{}); // use the standard library greater comparison
+// Before C++17, we had to specify the element type when we create std::greater
+std::sort(arr.begin(), arr.end(), std::greater<int>{}); // use the standard library greater comparison
+```
+
+Note that the `std::greater{}` needs the curly braces because it is not a callable function. It’s a type, and in order to use it, we need to instantiate an object of that type. The curly braces instantiate an anonymous object of that type (which then gets passed as an argument to `std::sort`).
+
+### Using std::for_each to do something to all elements of a container
+
+`std::for_each` takes a list as input and applies a custom function to every element. This is useful when we want to perform the same operation to every element in a list.
+
+Here’s an example where we use `std::for_each` to double all the numbers in an array:
+
+```cpp
+#include <algorithm>
+#include <array>
+#include <iostream>
+
+void doubleNumber(int& i)
+{
+    i *= 2;
+}
+
+int main()
+{
+    std::array arr{ 1, 2, 3, 4 };
+
+    std::for_each(arr.begin(), arr.end(), doubleNumber);
+
+    for (int i : arr)
+    {
+        std::cout << i << ' ';
+    }
+
+    std::cout << '\n';
+
+    return 0;
+}
+```
+
+Output
+
+```
+2 4 6 8
+```
+
+In **C++20**:
+
+```cpp
+std::ranges::for_each(arr, doubleNumber); // Since C++20, we don't have to use begin() and end().
+// std::for_each(arr.begin(), arr.end(), doubleNumber); // Before C++20
+
+for (auto& i : arr)
+{
+    doubleNumber(i);
+}
+```
+
+`std::for_each` can skip elements at the beginning or end of a container, for example to skip the first element of arr, `std::next` can be used to advance begin to the next element.
+
+```cpp
+std::for_each(std::next(arr.begin()), arr.end(), doubleNumber);
+// Now arr is [1, 4, 6, 8]. The first element wasn't doubled.
+```
+
+Like many algorithms, `std::for_each` can be parallelized to achieve faster processing, making it better suited for large projects and big data than a range-based for-loop.
+
+### Performance and order of execution
+
+most algorithms provide some kind of performance guarantee, fewer have order of execution guarantees.
+
+The following algorithms guarantee sequential execution: `std::for_each`, `std::copy`, `std::copy_backward`, `std::move`, and `std::move_backward`. Many other algorithms (particular those that use a forward iterator) are implicitly sequential due to the forward iterator requirement.
+
+### Ranges in C++20
+
+Having to explicitly pass `arr.begin()` and `arr.end()` to every algorithm is a bit annoying. But fear not -- C++20 adds `ranges`, which allow us to simply pass `arr`. This will make our code even shorter and more readable.
