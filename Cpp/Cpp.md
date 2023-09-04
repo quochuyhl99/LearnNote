@@ -4373,6 +4373,16 @@ std::cout << max<>(1, 2) << '\n';
 std::cout << max(1, 2) << '\n';
 ```
 
+## 8.16 — Function templates with multiple template types
+
+### Use static_cast to convert the arguments to matching types
+
+### Provide an explicit type template argument
+
+### Function templates with multiple template type parameters
+
+### Abbreviated function templates
+
 # Chapter 9: Compound Types: References and Pointers
 
 ## 9.1 — Introduction to compound data types
@@ -10192,3 +10202,1813 @@ The following algorithms guarantee sequential execution: `std::for_each`, `std::
 ### Ranges in C++20
 
 Having to explicitly pass `arr.begin()` and `arr.end()` to every algorithm is a bit annoying. But fear not -- C++20 adds `ranges`, which allow us to simply pass `arr`. This will make our code even shorter and more readable.
+
+# Chapter 12: Functions
+
+## 12.1 — Function Pointers
+
+At some point in your programming career (if you haven’t already), you’ll probably make a simple mistake:
+
+```cpp
+#include <iostream>
+
+int foo() // code starts at memory address 0x002717f0
+{
+    return 5;
+}
+
+int main()
+{
+    std::cout << foo << '\n'; // we meant to call foo(), but instead we're printing foo itself!
+
+    return 0;
+}
+```
+
+`operator<<` does not know how to output a function pointer (because there are an infinite number of possible function pointers). The standard says that in this case, `foo` should be converted to a `bool` (which `operator<<` does know how to print). And since the function pointer for `foo` is a non-void pointer, it should always evaluate to Boolean true. Thus, this should print:
+
+```
+1
+```
+
+Some compilers (e.g. Visual Studio) have a compiler extension that prints the address of the function instead: 0x002717f0
+
+If your platform doesn’t print the function’s address and you want it to, you may be able to force it to do so by converting the function to a void pointer and printing that:
+
+```cpp
+#include <iostream>
+
+int foo() // code starts at memory address 0x002717f0
+{
+    return 5;
+}
+
+int main()
+{
+    std::cout << reinterpret_cast<void*>(foo) << '\n'; // Tell C++ to interpret function foo as a void pointer (implementation-defined behavior)
+
+    return 0;
+}
+```
+
+### Pointers to functions
+
+The syntax for creating a non-const function pointer is one of the ugliest things you will ever see in C++:
+
+```cpp
+// fcnPtr is a pointer to a function that takes no arguments and returns an integer
+int (*fcnPtr)();
+```
+
+In the above snippet, fcnPtr is a pointer to a function that has no parameters and returns an integer. fcnPtr can point to any function that matches this type.
+
+The parentheses around _fcnPtr are necessary for precedence reasons, as int_ fcnPtr() would be interpreted as a forward declaration for a function named fcnPtr that takes no parameters and returns a pointer to an integer.
+
+To make a const function pointer, the const goes after the asterisk:
+
+```cpp
+int (*const fcnPtr)();
+```
+
+If you put the const before the int, then that would indicate the function being pointed to would return a const int.
+
+### Assigning a function to a function pointer
+
+```cpp
+int foo()
+{
+    return 5;
+}
+
+int goo()
+{
+    return 6;
+}
+
+int main()
+{
+    int (*fcnPtr)(){ &foo }; // fcnPtr points to function foo
+    fcnPtr = &goo; // fcnPtr now points to function goo
+
+    return 0;
+}
+```
+
+Note that the type (parameters and return type) of the function pointer must match the type of the function. Here are some examples of this:
+
+```cpp
+// function prototypes
+int foo();
+double goo();
+int hoo(int x);
+
+// function pointer initializers
+int (*fcnPtr1)(){ &foo };    // okay
+int (*fcnPtr2)(){ &goo };    // wrong -- return types don't match!
+double (*fcnPtr4)(){ &goo }; // okay
+fcnPtr1 = &hoo;              // wrong -- fcnPtr1 has no parameters, but hoo() does
+int (*fcnPtr3)(int){ &hoo }; // okay
+```
+
+Unlike fundamental types, C++ will implicitly convert a function into a function pointer if needed (so you don’t need to use the address-of operator (&) to get the function’s address). However, function pointers will not convert to void pointers, or vice-versa (though some compilers like Visual Studio may allow this anyway).
+
+```cpp
+// function prototypes
+int foo();
+
+// function initializations
+int (*fcnPtr5)() { foo }; // okay, foo implicitly converts to function pointer to foo
+void* vPtr { foo };       // not okay, though some compilers may allow
+```
+
+Function pointers can also be initialized or assigned the value nullptr:
+
+```cpp
+int (*fcnptr)() { nullptr }; // okay
+```
+
+### Calling a function using a function pointer
+
+There are two ways to do this. The first is via explicit dereference:
+
+```cpp
+int foo(int x)
+{
+    return x;
+}
+
+int main()
+{
+    int (*fcnPtr)(int){ &foo }; // Initialize fcnPtr with function foo
+    (*fcnPtr)(5); // call function foo(5) through fcnPtr.
+
+    return 0;
+}
+```
+
+The second way is via implicit dereference:
+
+```cpp
+int foo(int x)
+{
+    return x;
+}
+
+int main()
+{
+    int (*fcnPtr)(int){ &foo }; // Initialize fcnPtr with function foo
+    fcnPtr(5); // call function foo(5) through fcnPtr.
+
+    return 0;
+}
+```
+
+As you can see, the implicit dereference method looks just like a normal function call -- which is what you’d expect, since normal function names are pointers to functions anyway! However, some older compilers do not support the implicit dereference method, but all modern compilers should.
+
+One interesting note: Default parameters won’t work for functions called through function pointers. Default parameters are resolved at compile-time (that is, if you don’t supply an argument for a defaulted parameter, the compiler substitutes one in for you when the code is compiled). However, function pointers are resolved at run-time. Consequently, default parameters cannot be resolved when making a function call with a function pointer. You’ll explicitly have to pass in values for any defaulted parameters in this case.
+
+Also note that because function pointers can be set to nullptr, it’s a good idea to assert or conditionally test whether your function pointer is a null pointer before calling it. Just like with normal pointers, dereferencing a null function pointer leads to undefined behavior.
+
+```cpp
+int foo(int x)
+{
+    return x;
+}
+
+int main()
+{
+    int (*fcnPtr)(int){ &foo }; // Initialize fcnPtr with function foo
+    if (fcnPtr) // make sure fcnPtr isn't a null pointer
+        fcnPtr(5); // otherwise this will lead to undefined behavior
+
+    return 0;
+}
+```
+
+### Passing functions as arguments to other functions
+
+One of the most useful things to do with function pointers is pass a function as an argument to another function. Functions used as arguments to another function are sometimes called **callback functions**.
+
+eample:
+
+```cpp
+#include <utility> // for std::swap
+#include <iostream>
+
+// Note our user-defined comparison is the third parameter
+void selectionSort(int* array, int size, bool (*comparisonFcn)(int, int))
+{
+    // Step through each element of the array
+    for (int startIndex{ 0 }; startIndex < (size - 1); ++startIndex)
+    {
+        // bestIndex is the index of the smallest/largest element we've encountered so far.
+        int bestIndex{ startIndex };
+
+        // Look for smallest/largest element remaining in the array (starting at startIndex+1)
+        for (int currentIndex{ startIndex + 1 }; currentIndex < size; ++currentIndex)
+        {
+            // If the current element is smaller/larger than our previously found smallest
+            if (comparisonFcn(array[bestIndex], array[currentIndex])) // COMPARISON DONE HERE
+            {
+                // This is the new smallest/largest number for this iteration
+                bestIndex = currentIndex;
+            }
+        }
+
+        // Swap our start element with our smallest/largest element
+        std::swap(array[startIndex], array[bestIndex]);
+    }
+}
+
+// Here is a comparison function that sorts in ascending order
+// (Note: it's exactly the same as the previous ascending() function)
+bool ascending(int x, int y)
+{
+    return x > y; // swap if the first element is greater than the second
+}
+
+// Here is a comparison function that sorts in descending order
+bool descending(int x, int y)
+{
+    return x < y; // swap if the second element is greater than the first
+}
+
+// This function prints out the values in the array
+void printArray(int* array, int size)
+{
+    for (int index{ 0 }; index < size; ++index)
+    {
+        std::cout << array[index] << ' ';
+    }
+
+    std::cout << '\n';
+}
+
+int main()
+{
+    int array[9]{ 3, 7, 9, 5, 6, 1, 8, 2, 4 };
+
+    // Sort the array in descending order using the descending() function
+    selectionSort(array, 9, descending);
+    printArray(array, 9);
+
+    // Sort the array in ascending order using the ascending() function
+    selectionSort(array, 9, ascending);
+    printArray(array, 9);
+
+    return 0;
+}
+```
+
+This program produces the result:
+
+```
+9 8 7 6 5 4 3 2 1
+1 2 3 4 5 6 7 8 9
+```
+
+Note: If a function parameter is of a function type, it will be converted to a pointer to the function type. This means these two statements is equivalent:
+
+```cpp
+void selectionSort(int* array, int size, bool (*comparisonFcn)(int, int))
+void selectionSort(int* array, int size, bool comparisonFcn(int, int))
+```
+
+This only works for function parameters, and so is of somewhat limited use. On a non-function parameter, the latter is interpreted as a forward declaration:
+
+```cpp
+bool (*ptr)(int, int); // definition of function pointer ptr
+bool fcn(int, int);    // forward declaration of function fcn
+```
+
+### Providing default functions
+
+You can even set one of these as a default parameter:
+
+```cpp
+// Default the sort to ascending sort
+void selectionSort(int* array, int size, bool (*comparisonFcn)(int, int) = ascending);
+```
+
+### Making function pointers prettier with type aliases
+
+Let’s face it -- the syntax for pointers to functions is ugly. However, type aliases can be used to make pointers to functions look more like regular variables:
+
+```cpp
+using ValidateFunction = bool(*)(int, int);
+```
+
+This defines a type alias called “ValidateFunction” that is a pointer to a function that takes two ints and returns a bool.
+
+Now instead of doing this:
+
+```cpp
+bool validate(int x, int y, bool (*fcnPtr)(int, int)); // ugly
+```
+
+You can do this:
+
+```cpp
+bool validate(int x, int y, ValidateFunction pfcn) // clean
+```
+
+### Using std::function
+
+An alternate method of defining and storing function pointers is to use `std::function`, which is part of the standard library `<functional>` header. To define a function pointer using this method, declare a `std::function` object like so:
+
+```cpp
+#include <functional>
+bool validate(int x, int y, std::function<bool(int, int)> fcn); // std::function method that returns a bool and takes two int parameters
+```
+
+Type aliasing `std::function` can be helpful for readability:
+
+```cpp
+using ValidateFunctionRaw = bool(*)(int, int); // type alias to raw function pointer
+using ValidateFunction = std::function<bool(int, int)>; // type alias to std::function
+```
+
+Also note that `std::function` only allows calling the function via implicit dereference (e.g. `fcnPtr()`), not explicit dereference (e.g. `(*fcnPtr)()`).
+
+When defining a type alias, we must explicitly specify any template arguments. We can’t use CTAD in this case since there is no initializer to deduce the template arguments from.
+
+### Type inference for function pointers
+
+Much like the auto keyword can be used to infer the type of normal variables, the auto keyword can also infer the type of a function pointer.
+
+```cpp
+#include <iostream>
+
+int foo(int x)
+{
+	return x;
+}
+
+int main()
+{
+	auto fcnPtr{ &foo };
+	std::cout << fcnPtr(5) << '\n';
+
+	return 0;
+}
+```
+
+This works exactly like you’d expect, and the syntax is very clean. The downside is, of course, that all of the details about the function’s parameters types and return type are hidden, so it’s easier to make a mistake when making a call with the function, or using its return value.
+
+## 12.2 — The stack and the heap
+
+The memory that a program uses is typically divided into a few different areas, called segments:
+
+-   The **code segment** (also called a text segment), where the compiled program sits in memory. The code segment is typically read-only.
+-   The **bss segment** (also called the uninitialized data segment), where zero-initialized global and static variables are stored.
+-   The **data segment** (also called the initialized data segment), where initialized global and static variables are stored.
+-   The **heap**, where dynamically allocated variables are allocated from.
+-   The **call stack**, where function parameters, local variables, and other function-related information are stored.
+
+For more detail, read on website
+
+## 12.3 — std::vector capacity and stack behavior
+
+### Length vs capacity
+
+Consider the following example:
+
+```cpp
+int* array{ new int[10] { 1, 2, 3, 4, 5 } };
+```
+
+We would say that this array has a length of 10, even though we’re only using 5 of the elements that we allocated.
+
+Unlike a built-in array or a std::array, which only remembers its length, std::vector contains two separate attributes: length and capacity. In the context of a std::vector, **length** is how many elements are being used in the array, whereas **capacity** is how many elements were allocated in memory.
+
+Consider example:
+
+```cpp
+#include <vector>
+#include <iostream>
+
+int main()
+{
+    std::vector array { 0, 1, 2 };
+    array.resize(5); // set length to 5
+
+    for (auto element: array)
+        std::cout << element << ' ';
+
+    std::cout << "The length is: " << array.size() << '\n';
+    std::cout << "The capacity is: " << array.capacity() << '\n';
+}
+```
+
+The result is:
+
+```
+0 1 2 0 0
+The length is: 5
+The capacity is: 5
+```
+
+In the above example, we’ve used the `resize()` function to set the vector’s length to 5. This tells variable array that we’re intending to use the first 5 elements of the array, so it should consider those in active use. In this case, the `resize()` function caused the `std::vector` to change both its length and capacity. Note that **the capacity is guaranteed to be at least as large as the array length (but could be larger)**, otherwise accessing the elements at the end of the array would be outside of the allocated memory!
+
+### More length vs. capacity
+
+Why differentiate between length and capacity? `std::vector` will reallocate its memory if needed, but it would prefer not to, because resizing an array is computationally expensive. Consider the following:
+
+```cpp
+#include <vector>
+#include <iostream>
+
+int main()
+{
+  std::vector<int> array{};
+  array = { 0, 1, 2, 3, 4 }; // okay, array length = 5
+  std::cout << "length: " << array.size() << "  capacity: " << array.capacity() << '\n';
+
+  array = { 9, 8, 7 }; // okay, array length is now 3!
+  std::cout << "length: " << array.size() << "  capacity: " << array.capacity() << '\n';
+
+  return 0;
+}
+```
+
+This produces the following:
+
+```
+length: 5  capacity: 5
+length: 3  capacity: 5
+```
+
+Note that although we assigned a smaller array to our vector, it did not reallocate its memory (the capacity is still 5). It simply changed its length, so it knows that only the first 3 elements are valid at this time.
+
+### Array subscripts and at() are based on length, not capacity
+
+The range for the subscript `operator ([])` and `at()` function is **based on the vector’s length, not the capacity**. Consider the array in the previous example, which has length 3 and capacity 5. What happens if we try to access the array element with index 4? The answer is that it fails, since 4 is greater than the length of the array.
+
+Note that a vector will **not resize** itself based on a call to the `subscript operator` or `at()` function!
+
+### Stack behavior with std::vector
+
+If the subscript operator and at() function are based on the array length, and the capacity is always at least as large as the array length, why even worry about the capacity at all? Although std::vector can be used as a dynamic array, it can also be used as a stack. To do this, we can use 3 functions that match our key stack operations:
+
+-   `push_back()` pushes an element on the stack.
+-   `back()` returns the value of the top element on the stack.
+-   `pop_back()` pops an element off the stack.
+
+```cpp
+#include <iostream>
+#include <vector>
+
+void printStack(const std::vector<int>& stack)
+{
+	for (auto element : stack)
+		std::cout << element << ' ';
+	std::cout << "(cap " << stack.capacity() << " length " << stack.size() << ")\n";
+}
+
+int main()
+{
+	std::vector<int> stack{};
+
+	printStack(stack);
+
+	stack.push_back(5); // push_back() pushes an element on the stack
+	printStack(stack);
+
+	stack.push_back(3);
+	printStack(stack);
+
+	stack.push_back(2);
+	printStack(stack);
+
+	std::cout << "top: " << stack.back() << '\n'; // back() returns the last element
+
+	stack.pop_back(); // pop_back() pops an element off the stack
+	printStack(stack);
+
+	stack.pop_back();
+	printStack(stack);
+
+	stack.pop_back();
+	printStack(stack);
+
+	return 0;
+}
+```
+
+this prints:
+
+```
+(cap 0 length 0)
+5 (cap 1 length 1)
+5 3 (cap 2 length 2)
+5 3 2 (cap 3 length 3)
+top: 2
+5 3 (cap 3 length 2)
+5 (cap 3 length 1)
+(cap 3 length 0)
+```
+
+Unlike array subscripts or at(), the stack-based functions will resize the std::vector if necessary. In the example above, the vector gets resized 3 times (from a capacity of 0 to 1, 1 to 2, and 2 to 3).
+
+Because resizing the vector is expensive, we can tell the vector to allocate a certain amount of capacity up front using the `reserve()` function:
+
+```cpp
+#include <vector>
+#include <iostream>
+
+void printStack(const std::vector<int>& stack)
+{
+	for (auto element : stack)
+		std::cout << element << ' ';
+	std::cout << "(cap " << stack.capacity() << " length " << stack.size() << ")\n";
+}
+
+int main()
+{
+	std::vector<int> stack{};
+
+	stack.reserve(5); // Set the capacity to (at least) 5
+
+	printStack(stack);
+
+	stack.push_back(5);
+	printStack(stack);
+
+	stack.push_back(3);
+	printStack(stack);
+
+	stack.push_back(2);
+	printStack(stack);
+
+	std::cout << "top: " << stack.back() << '\n';
+
+	stack.pop_back();
+	printStack(stack);
+
+	stack.pop_back();
+	printStack(stack);
+
+	stack.pop_back();
+	printStack(stack);
+
+	return 0;
+}
+```
+
+this program prints:
+
+```
+(cap 5 length 0)
+5 (cap 5 length 1)
+5 3 (cap 5 length 2)
+5 3 2 (cap 5 length 3)
+top: 2
+5 3 (cap 5 length 2)
+5 (cap 5 length 1)
+(cap 5 length 0)
+```
+
+We can see that the capacity was preset to 5 and didn’t change over the lifetime of the program.
+
+### Vectors may allocate extra capacity
+
+When a vector is resized, the vector may allocate more capacity than is needed. This is done to provide some “breathing room” for additional elements, to minimize the number of resize operations needed. Let’s take a look at this:
+
+```cpp
+#include <vector>
+#include <iostream>
+
+int main()
+{
+	std::vector v{ 0, 1, 2, 3, 4 };
+	std::cout << "size: " << v.size() << "  cap: " << v.capacity() << '\n';
+
+	v.push_back(5); // add another element
+	std::cout << "size: " << v.size() << "  cap: " << v.capacity() << '\n';
+
+	return 0;
+}
+```
+
+this prints:
+
+```
+size: 5  cap: 5
+size: 6  cap: 7
+```
+
+When we used `push_back()` to add a new element, our vector only needed room for 6 elements, but allocated room for 7. This was done so that if we were to `push_back()` another element, it wouldn’t need to resize immediately.
+
+If, when, and how much additional capacity is allocated is left up to the compiler implementer.
+
+## 12.4 — Recursion
+
+A **recursive function** in C++ is a function that calls itself
+
+### Recursive termination conditions
+
+A **recursive termination** is a condition that, when met, will cause the recursive function to stop calling itself.
+
+```cpp
+#include <iostream>
+
+void countDown(int count)
+{
+    std::cout << "push " << count << '\n';
+
+    if (count > 1) // termination condition
+        countDown(count-1);
+
+    std::cout << "pop " << count << '\n';
+}
+
+int main()
+{
+    countDown(5);
+    return 0;
+}
+```
+
+Now when we run our program, countDown() will start by outputting the following:
+
+```
+push 5
+push 4
+push 3
+push 2
+push 1
+```
+
+If you were to look at the call stack at this point, you would see the following:
+
+```cpp
+countDown(1)
+countDown(2)
+countDown(3)
+countDown(4)
+countDown(5)
+main()
+```
+
+Because of the termination condition, countDown(1) does not call countDown(0) -- instead, the “if statement” does not execute, so it prints “pop 1” and then terminates. At this point, countDown(1) is popped off the stack, and control returns to countDown(2). countDown(2) resumes execution at the point after countDown(1) was called, so it prints “pop 2” and then terminates. The recursive function calls get subsequently popped off the stack until all instances of countDown have been removed.
+
+Thus, this program in total outputs:
+
+```
+push 5
+push 4
+push 3
+push 2
+push 1
+pop 1
+pop 2
+pop 3
+pop 4
+pop 5
+```
+
+### Recursive algorithms
+
+In many recursive algorithms, some inputs produce trivial outputs. For example, sumTo(1) has the trivial output 1 (you can calculate this in your head), and does not benefit from further recursion. Inputs for which an algorithm trivially produces an output is called a base case. Base cases act as termination conditions for the algorithm. Base cases can often be identified by considering the output for an input of 0, 1, “”, ”, or null.
+
+### Fibonacci numbers
+
+```
+F(n)=   0 if n = 0
+        1 if n = 1
+        f(n-1) + f(n-2) if n > 1
+```
+
+```cpp
+#include <iostream>
+
+int fibonacci(int count)
+{
+    if (count == 0)
+        return 0; // base case (termination condition)
+    if (count == 1)
+        return 1; // base case (termination condition)
+    return fibonacci(count-1) + fibonacci(count-2);
+}
+
+// And a main program to display the first 13 Fibonacci numbers
+int main()
+{
+    for (int count { 0 }; count < 13; ++count)
+        std::cout << fibonacci(count) << ' ';
+
+    return 0;
+}
+```
+
+```
+0 1 1 2 3 5 8 13 21 34 55 89 144
+```
+
+### Memoization algorithms
+
+The above recursive Fibonacci algorithm isn’t very efficient, in part because each call to a Fibonacci non-base case results in two more Fibonacci calls. This produces an exponential number of function calls (in fact, the above example calls fibonacci() 1205 times!). There are techniques that can be used to reduce the number of calls necessary. One technique, called memoization, caches the results of expensive function calls so the result can be returned when the same input occurs again.
+
+Here’s a memoized version of the recursive Fibonacci algorithm:
+
+```cpp
+#include <iostream>
+#include <vector>
+
+// h/t to potterman28wxcv for a variant of this code
+int fibonacci(int count)
+{
+	// We'll use a static std::vector to cache calculated results
+	static std::vector results{ 0, 1 };
+
+	// If we've already seen this count, then use the cache'd result
+	if (count < static_cast<int>(std::size(results)))
+		return results[count];
+
+	// Otherwise calculate the new result and add it
+	results.push_back(fibonacci(count - 1) + fibonacci(count - 2));
+	return results[count];
+}
+
+// And a main program to display the first 13 Fibonacci numbers
+int main()
+{
+	for (int count { 0 }; count < 13; ++count)
+		std::cout << fibonacci(count) << ' ';
+
+	return 0;
+}
+```
+
+## 12.5 — Command line arguments
+
+### Passing command line arguments
+
+For example, to run the executable file “WordCount”
+Windows:
+
+```
+WordCount
+```
+
+Unix-based OS
+
+```
+./WordCount
+```
+
+In order to pass command line arguments to WordCount, we simply list the command line arguments after the executable name:
+
+```
+WordCount Myfile.txt Myotherfile.txt
+```
+
+### Using command line arguments
+
+Now that you know how to provide command line arguments to a program, the next step is to access them from within our C++ program. To do that, we use a different form of `main()` than we’ve seen before. This new form of `main()` takes two arguments (named `argc` and `argv` by convention) as follows:
+
+```cpp
+int main(int argc, char* argv[])
+```
+
+You will sometimes also see it written as:
+
+```cpp
+int main(int argc, char** argv)
+```
+
+-   **argc** is an integer parameter containing a count of the number of arguments passed to the program (think: argc = argument count). argc will always be at least 1, because the first argument is always the name of the program itself. Each command line argument the user provides will cause argc to increase by 1.
+
+-   **argv** is where the actual argument values are stored (think: argv = argument values, though the proper name is “argument vectors”). Although the declaration of argv looks intimidating, argv is really just an array of char pointers (each of which points to a C-style string). The length of this array is argc.
+
+Let’s write a short program named “MyArgs” to print the value of all the command line parameters:
+
+```cpp
+// Program: MyArgs
+#include <iostream>
+
+int main(int argc, char* argv[])
+{
+    std::cout << "There are " << argc << " arguments:\n";
+
+    // Loop through each argument and print its number and value
+    for (int count{ 0 }; count < argc; ++count)
+    {
+        std::cout << count << ' ' << argv[count] << '\n';
+    }
+
+    return 0;
+}
+```
+
+Now, when we invoke this program (MyArgs) with the command line arguments “Myfile.txt” and “100”, the output will be as follows:
+
+```
+There are 3 arguments:
+0 C:\MyArgs
+1 Myfile.txt
+2 100
+```
+
+Argument 0 is the path and name of the current program being run. Argument 1 and 2 in this case are the two command line parameters we passed in.
+
+### Dealing with numeric arguments
+
+Command line arguments are always passed as strings, even if the value provided is numeric in nature. To use a command line argument as a number, you must convert it from a string to a number. Unfortunately, C++ makes this a little more difficult than it should be.
+
+The C++ way to do this follows:
+
+```cpp
+#include <iostream>
+#include <sstream> // for std::stringstream
+#include <string>
+
+int main(int argc, char* argv[])
+{
+	if (argc <= 1)
+	{
+		// On some operating systems, argv[0] can end up as an empty string instead of the program's name.
+		// We'll conditionalize our response on whether argv[0] is empty or not.
+		if (argv[0])
+			std::cout << "Usage: " << argv[0] << " <number>" << '\n';
+		else
+			std::cout << "Usage: <program name> <number>" << '\n';
+
+		return 1;
+	}
+
+	std::stringstream convert{ argv[1] }; // set up a stringstream variable named convert, initialized with the input from argv[1]
+
+	int myint{};
+	if (!(convert >> myint)) // do the conversion
+		myint = 0; // if conversion fails, set myint to a default value
+
+	std::cout << "Got integer: " << myint << '\n';
+
+	return 0;
+}
+```
+
+`std::stringstream` works much like `std::cin`. In this case, we’re initializing it with the value of `argv[1]`, so that we can use `operator>>` to extract the value to an integer variable (the same as we would with `std::cin`).
+
+We’ll talk more about `std::stringstream` in a future chapter.
+
+### The OS parses command line arguments first
+
+Generally, operating systems have special rules about how special characters like double quotes and backslashes are handled.
+
+For example:
+
+```
+MyArgs Hello world!
+```
+
+prints:
+
+```
+There are 3 arguments:
+0 C:\MyArgs
+1 Hello
+2 world!
+```
+
+Typically, strings passed in double quotes are considered to be part of the same strin
+
+```
+MyArgs "Hello world!"
+```
+
+prints:
+
+```
+There are 2 arguments:
+0 C:\MyArgs
+1 Hello world!
+```
+
+Most operating systems will allow you to include a literal double quote by backslashing the double quote:
+
+```
+MyArgs \"Hello world!\"
+```
+
+prints:
+
+```
+There are 3 arguments:
+0 C:\MyArgs
+1 "Hello
+2 world!"
+```
+
+Other characters may also require backslashing or escaping depending on how your OS interprets them.
+
+## 12.6 — Ellipsis (and why to avoid them)
+
+there are certain cases where it can be useful to be able to pass a variable number of parameters to a function. C++ provides a special specifier known as ellipsis (aka “…”) that allow us to do precisely this.
+
+Functions that use ellipsis take the form:
+
+```
+return_type function_name(argument_list, ...)
+```
+
+The argument_list is one or more normal function parameters. Note that functions that use ellipsis must have at least one non-ellipsis parameter. Any arguments passed to the function must match the argument_list parameters first.
+
+The ellipsis (which are represented as three periods in a row) must always be the last parameter in the function. The ellipsis capture any additional arguments (if there are any). Though it is not quite accurate, it is conceptually useful to think of the ellipsis as an array that holds any additional parameters beyond those in the argument_list.
+
+**Continue if have time**
+
+## 12.7 — Introduction to lambdas (anonymous functions)
+
+Consider this snippet of code that we introduced in lesson 11.18 -- Introduction to standard library algorithms:
+
+```cpp
+#include <algorithm>
+#include <array>
+#include <iostream>
+#include <string_view>
+
+// Our function will return true if the element matches
+bool containsNut(std::string_view str)
+{
+    // std::string_view::find returns std::string_view::npos if it doesn't find
+    // the substring. Otherwise it returns the index where the substring occurs
+    // in str.
+    return (str.find("nut") != std::string_view::npos);
+}
+
+int main()
+{
+    std::array<std::string_view, 4> arr{ "apple", "banana", "walnut", "lemon" };
+
+    // Scan our array to see if any elements contain the "nut" substring
+    auto found{ std::find_if(arr.begin(), arr.end(), containsNut) };
+
+    if (found == arr.end())
+    {
+        std::cout << "No nuts\n";
+    }
+    else
+    {
+        std::cout << "Found " << *found << '\n';
+    }
+
+    return 0;
+}
+```
+
+### Lambdas are anonymous functions
+
+A **lambda expression** (also called a **lambda** or **closure**) allows us to define an anonymous function inside another function. The nesting is important, as it allows us both to avoid namespace naming pollution, and to define the function as close to where it is used as possible (providing additional context).
+
+The syntax for lambdas is one of the weirder things in C++, and takes a bit of getting used to. Lambdas take the form:
+
+```
+[ captureClause ] ( parameters ) -> returnType
+{
+    statements;
+}
+```
+
+-   The capture clause can be empty if no captures are needed.
+-   The parameter list can be empty if no parameters are required. It can also be omitted entirely unless a return type is specified.
+-   The return type is optional, and if omitted, auto will be assumed (thus using type deduction used to determine the return type). While we previously noted that type deduction for function return types should be avoided, in this context, it’s fine to use (because these functions are typically so trivial).
+
+Also note that lambdas (being anonymous) have no name, so we don’t need to provide one.
+
+This means a trivial lambda definition looks like this:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+  [] {}; // a lambda with an omitted return type, no captures, and omitted parameters.
+
+  return 0;
+}
+```
+
+Let’s rewrite the above example using a lambda:
+
+```cpp
+#include <algorithm>
+#include <array>
+#include <iostream>
+#include <string_view>
+
+int main()
+{
+  constexpr std::array<std::string_view, 4> arr{ "apple", "banana", "walnut", "lemon" };
+
+  // Define the function right where we use it.
+  const auto found{ std::find_if(arr.begin(), arr.end(),
+                           [](std::string_view str) // here's our lambda, no capture clause
+                           {
+                             return (str.find("nut") != std::string_view::npos);
+                           }) };
+
+  if (found == arr.end())
+  {
+    std::cout << "No nuts\n";
+  }
+  else
+  {
+    std::cout << "Found " << *found << '\n';
+  }
+
+  return 0;
+}
+```
+
+This works just like the function pointer case, and produces an identical result:
+
+```
+Found walnut
+```
+
+Note how similar our lambda is to our `containsNut` function. They both have identical parameters and function bodies. The lambda has no capture clause (we’ll explain what a capture clause is in the next lesson) because it doesn’t need one. And we’ve omitted the trailing return type in the lambda (for conciseness), but since `operator!=` returns a `bool`, our lambda will return a `bool` too.
+
+### Type of a lambda
+
+In the above example, we defined a lambda right where it was needed. This use of a lambda is sometimes called a **function literal**.
+
+However, writing a lambda in the same line as it’s used can sometimes make code harder to read. Much like we can initialize a variable with a literal value (or a function pointer) for use later, we can also initialize a lambda variable with a lambda definition and then use it later. A named lambda along with a good function name can make code easier to read.
+
+For example, in the following snippet, we’re using `std::all_of` to check if all elements of an array are even:
+
+```cpp
+// Bad: We have to read the lambda to understand what's happening.
+return std::all_of(array.begin(), array.end(), [](int i){ return ((i % 2) == 0); });
+```
+
+We can improve the readability of this as follows:
+
+```cpp
+// Good: Instead, we can store the lambda in a named variable and pass it to the function.
+auto isEven{
+  [](int i)
+  {
+    return ((i % 2) == 0);
+  }
+};
+
+return std::all_of(array.begin(), array.end(), isEven);
+```
+
+But what is the type of lambda isEven?
+
+As it turns out, lambdas don’t have a type that we can explicitly use. When we write a lambda, the compiler generates a unique type just for the lambda that is not exposed to us.
+
+In actuality, lambdas aren’t functions (which is part of how they avoid the limitation of C++ not supporting nested functions). They’re a special kind of object called a functor. Functors are objects that contain an overloaded opera`tor()` that make them callable like a function.
+
+Although we don’t know the type of a lambda, there are several ways of storing a lambda for use post-definition. If the lambda has an empty capture clause (nothing between the hard brackets []), we can use a regular function pointer. `std::function` or type deduction via the `auto` keyword will also work (even if the lambda has a non-empty capture clause).
+
+```cpp
+#include <functional>
+
+int main()
+{
+  // A regular function pointer. Only works with an empty capture clause (empty []).
+  double (*addNumbers1)(double, double){
+    [](double a, double b) {
+      return (a + b);
+    }
+  };
+
+  addNumbers1(1, 2);
+
+  // Using std::function. The lambda could have a non-empty capture clause (discussed next lesson).
+  std::function addNumbers2{ // note: pre-C++17, use std::function<double(double, double)> instead
+    [](double a, double b) {
+      return (a + b);
+    }
+  };
+
+  addNumbers2(3, 4);
+
+  // Using auto. Stores the lambda with its real type.
+  auto addNumbers3{
+    [](double a, double b) {
+      return (a + b);
+    }
+  };
+
+  addNumbers3(5, 6);
+
+  return 0;
+}
+```
+
+The only way of using the lambda’s actual type is by means of `auto`. `auto` also has the benefit of having no overhead compared to `std::function`.
+
+Unfortunately, prior to C++20, we can’t always use `auto`. In cases where the actual lambda is unknown (e.g. because we’re passing a lambda to a function as a parameter and the caller determines what lambda will be passed in), we can’t use `auto` without compromises. In such cases, `std::function` can be used instead.
+
+```cpp
+#include <functional>
+#include <iostream>
+
+// We don't know what fn will be. std::function works with regular functions and lambdas.
+void repeat(int repetitions, const std::function<void(int)>& fn)
+{
+  for (int i{ 0 }; i < repetitions; ++i)
+  {
+    fn(i);
+  }
+}
+
+int main()
+{
+  repeat(3, [](int i) {
+    std::cout << i << '\n';
+  });
+
+  return 0;
+}
+```
+
+If we had used `auto` for the type of `fn`, the caller of the function wouldn’t know what parameters and return type `fn` needs to have. This limitation was lifted in C++20 when abbreviated function templates were added.
+
+Furthermore, because they are actually templates, functions with auto parameters cannot be separated into a header (declaration) and source file (definition).
+
+When storing a lambda in a variable, use auto as the variable’s type.
+
+When passing a lambda to a function:
+
+-   If C++20 capable, use auto as the parameter’s type.
+-   Otherwise, use std::function.
+
+### Generic lambdas
+
+lambdas with one or more `auto` parameter can potentially work with a wide variety of types, they are called **generic lambdas**.
+
+When used in the context of a lambda, auto is just a shorthand for a template parameter.
+
+```cpp
+#include <algorithm>
+#include <array>
+#include <iostream>
+#include <string_view>
+
+int main()
+{
+  constexpr std::array months{ // pre-C++17 use std::array<const char*, 12>
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December"
+  };
+
+  // Search for two consecutive months that start with the same letter.
+  const auto sameLetter{ std::adjacent_find(months.begin(), months.end(),
+                                      [](const auto& a, const auto& b) {
+                                        return (a[0] == b[0]);
+                                      }) };
+
+  // Make sure that two months were found.
+  if (sameLetter != months.end())
+  {
+    // std::next returns the next iterator after sameLetter
+    std::cout << *sameLetter << " and " << *std::next(sameLetter)
+              << " start with the same letter\n";
+  }
+
+  return 0;
+}
+```
+
+Output:
+
+```
+June and July start with the same letter
+```
+
+In the above example, we use `auto` parameters to capture our strings by `const` reference. Because all string types allow access to their individual characters via `operator[]`, we don’t need to care whether the user is passing in a `std::string`, C-style string, or something else. This allows us to write a lambda that could accept any of these, meaning if we change the type of months later, we won’t have to rewrite the lambda.
+
+However, `auto` isn’t always the best choice. Consider:
+
+```cpp
+#include <algorithm>
+#include <array>
+#include <iostream>
+#include <string_view>
+
+int main()
+{
+  constexpr std::array months{ // pre-C++17 use std::array<const char*, 12>
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December"
+  };
+
+  // Count how many months consist of 5 letters
+  const auto fiveLetterMonths{ std::count_if(months.begin(), months.end(),
+                                       [](std::string_view str) {
+                                         return (str.length() == 5);
+                                       }) };
+
+  std::cout << "There are " << fiveLetterMonths << " months with 5 letters\n";
+
+  return 0;
+}
+```
+
+Output:
+
+```
+There are 2 months with 5 letters
+```
+
+In this example, using `auto` would infer a type of `const char*`. C-style strings aren’t easy to work with (apart from using `operator[]`). In this case, we prefer to explicitly define the parameter as a `std::string_view`, which allows us to work with the underlying data much more easily (e.g. we can ask the string view for its length, even if the user passed in a C-style array).
+
+### Generic lambdas and static variables
+
+One thing to be aware of is that a unique lambda will be generated for each different type that auto resolves to. The following example shows how one generic lambda turns into two distinct lambdas:
+
+```cpp
+#include <algorithm>
+#include <array>
+#include <iostream>
+#include <string_view>
+
+int main()
+{
+  // Print a value and count how many times @print has been called.
+  auto print{
+    [](auto value) {
+      static int callCount{ 0 };
+      std::cout << callCount++ << ": " << value << '\n';
+    }
+  };
+
+  print("hello"); // 0: hello
+  print("world"); // 1: world
+
+  print(1); // 0: 1
+  print(2); // 1: 2
+
+  print("ding dong"); // 2: ding dong
+
+  return 0;
+}
+```
+
+In the above example, we define a lambda and then call it with two different parameters (a string literal parameter, and an integer parameter). This generates two different versions of the lambda (one with a string literal parameter, and one with an integer parameter).
+
+Most of the time, this is inconsequential. However, note that if the generic lambda uses static duration variables, those variables are not shared between the generated lambdas.
+
+### Return type deduction and trailing return types
+
+If return type deduction is used, a lambda’s return type is deduced from the `return`-statements inside the lambda, and all return statements in the lambda must return the same type (otherwise the compiler won’t know which one to prefer).
+
+```cpp
+#include <iostream>
+
+int main()
+{
+  auto divide{ [](int x, int y, bool intDivision) { // note: no specified return type
+    if (intDivision)
+      return x / y; // return type is int
+    else
+      return static_cast<double>(x) / y; // ERROR: return type doesn't match previous return type
+  } };
+
+  std::cout << divide(3, 2, true) << '\n';
+  std::cout << divide(3, 2, false) << '\n';
+
+  return 0;
+}
+```
+
+This produces a compile error because the return type of the first return statement (int) doesn’t match the return type of the second return statement (double).
+
+In the case where we’re returning different types, we have two options:
+
+1. Do explicit casts to make all the return types match, or
+2. explicitly specify a return type for the lambda, and let the compiler do implicit conversions.
+
+The second case is usually the better choice:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+  // note: explicitly specifying this returns a double
+  auto divide{ [](int x, int y, bool intDivision) -> double {
+    if (intDivision)
+      return x / y; // will do an implicit conversion of result to double
+    else
+      return static_cast<double>(x) / y;
+  } };
+
+  std::cout << divide(3, 2, true) << '\n';
+  std::cout << divide(3, 2, false) << '\n';
+
+  return 0;
+}
+```
+
+### Standard library function objects
+
+For common operations (e.g. addition, negation, or comparison) you don’t need to write your own lambdas, because the standard library comes with many basic callable objects that can be used instead. These are defined in the `<functional>` header.
+
+## 12.8 — Lambda captures
+
+### Capture clauses and capture by value
+
+let’s modify the nut example and let the user pick a substring to search for. This isn’t as intuitive as you might expect.
+
+```cpp
+#include <algorithm>
+#include <array>
+#include <iostream>
+#include <string_view>
+#include <string>
+
+int main()
+{
+  std::array<std::string_view, 4> arr{ "apple", "banana", "walnut", "lemon" };
+
+  // Ask the user what to search for.
+  std::cout << "search for: ";
+
+  std::string search{};
+  std::cin >> search;
+
+  auto found{ std::find_if(arr.begin(), arr.end(), [](std::string_view str) {
+    // Search for @search rather than "nut".
+    return (str.find(search) != std::string_view::npos); // Error: search not accessible in this scope
+  }) };
+
+  if (found == arr.end())
+  {
+    std::cout << "Not found\n";
+  }
+  else
+  {
+    std::cout << "Found " << *found << '\n';
+  }
+
+  return 0;
+}
+```
+
+This code won’t compile. Unlike nested blocks, where any identifier defined in an outer block is accessible in the scope of the nested block, lambdas can only access specific kinds of identifiers:
+
+-   global identifiers
+-   entities that are known at compile time
+-   entities with static storage duration.
+
+`search` fulfills none of these requirements, so the lambda can’t see it. That’s what the capture clause is there for.
+
+### The capture clause
+
+The **capture clause** is used to (indirectly) give a lambda access to variables available in the surrounding scope that it normally would not have access to. All we need to do is list the entities we want to access from within the lambda as part of the capture clause. In this case, we want to give our lambda access to the value of variable `search`, so we add it to the capture clause:
+
+```cpp
+#include <algorithm>
+#include <array>
+#include <iostream>
+#include <string_view>
+#include <string>
+
+int main()
+{
+  std::array<std::string_view, 4> arr{ "apple", "banana", "walnut", "lemon" };
+
+  std::cout << "search for: ";
+
+  std::string search{};
+  std::cin >> search;
+
+  // Capture @search                                vvvvvv
+  auto found{ std::find_if(arr.begin(), arr.end(), [search](std::string_view str) {
+    return (str.find(search) != std::string_view::npos);
+  }) };
+
+  if (found == arr.end())
+  {
+    std::cout << "Not found\n";
+  }
+  else
+  {
+    std::cout << "Found " << *found << '\n';
+  }
+
+  return 0;
+}
+```
+
+The user can now search for an element of our array.
+
+Output
+
+```
+search for: nana
+Found banana
+```
+
+### So how do captures actually work?
+
+When a lambda definition is executed, for each variable that the lambda captures, a clone of that variable is made (with an identical name) inside the lambda. These cloned variables are initialized from the outer scope variables of the same name at this point.
+
+Thus, in the above example, when the lambda object is created, the lambda gets its own cloned variable named `search`. This cloned `search` has the same value as `main`‘s `search`, so it behaves like we’re accessing `main`‘s `search`, but we’re not.
+
+While these cloned variables have the same name, they don’t necessarily have the same type as the original variable. We’ll explore this in the upcoming sections of this lesson.
+
+Although lambdas look like functions, they’re actually objects that can be called like functions (these are called functors -- we’ll discuss how to create your own functors from scratch in a future lesson).
+
+When the compiler encounters a lambda definition, it creates a custom object definition for the lambda. Each captured variable becomes a data member of the object.
+
+At runtime, when the lambda definition is encountered, the lambda object is instantiated, and the members of the lambda are initialized at that point.
+
+### Captures default to const value
+
+By default, variables are captured by `const value`. This means when the lambda is created, the lambda captures a constant copy of the outer scope variable, which means that the lambda is **not allowed to modify** them
+
+### Mutable capture by value
+
+To allow modifications of variables that were captured by value, we can mark the lambda as `mutable`. The **mutable** keyword in this context removes the `const` qualification from all variables captured by value.
+
+```cpp
+#include <iostream>
+
+int main()
+{
+  int ammo{ 10 };
+
+  auto shoot{
+    // Added mutable after the parameter list.
+    [ammo]() mutable {
+      // We're allowed to modify ammo now
+      --ammo;
+
+      std::cout << "Pew! " << ammo << " shot(s) left.\n";
+    }
+  };
+
+  shoot();
+  shoot();
+
+  std::cout << ammo << " shot(s) left\n";
+
+  return 0;
+}
+```
+
+Output:
+
+```
+Pew! 9 shot(s) left.
+Pew! 8 shot(s) left.
+10 shot(s) left
+```
+
+While this now compiles, there’s still a logic error. What happened? When the lambda was called, the lambda captured a copy of `ammo`. When the lambda decremented `ammo` from 10 to 9 to 8, it decremented its own copy, not the original value.
+
+Note that the value of `ammo` is preserved across calls to the lambda!
+
+Because captured variables are members of the lambda object, their values are persisted across multiple calls to the lambda!
+
+### Capture by reference
+
+To capture a variable by reference, we prepend an ampersand `&` to the variable name in the capture
+
+```cpp
+#include <iostream>
+
+int main()
+{
+  int ammo{ 10 };
+
+  auto shoot{
+    // We don't need mutable anymore
+    [&ammo]() { // &ammo means ammo is captured by reference
+      // Changes to ammo will affect main's ammo
+      --ammo;
+
+      std::cout << "Pew! " << ammo << " shot(s) left.\n";
+    }
+  };
+
+  shoot();
+
+  std::cout << ammo << " shot(s) left\n";
+
+  return 0;
+}
+```
+
+This produces the expected answer:
+
+```
+Pew! 9 shot(s) left.
+9 shot(s) left
+```
+
+### Capturing multiple variables
+
+Multiple variables can be captured by separating them with a comma. This can include a mix of variables captured by value or by reference:
+
+```cpp
+int health{ 33 };
+int armor{ 100 };
+std::vector<CEnemy> enemies{};
+
+// Capture health and armor by value, and enemies by reference.
+[health, armor, &enemies](){};
+```
+
+### Default captures
+
+Having to explicitly list the variables you want to capture can be burdensome. If you modify your lambda, you may forget to add or remove captured variables. Fortunately, we can enlist the compiler’s help to auto-generate a list of variables we need to capture.
+
+A **default capture** (also called a **capture-default**) captures all variables that are mentioned in the lambda. Variables not mentioned in the lambda are not captured if a default capture is used.
+
+-   To capture all used variables by value, use a capture value of `=`.
+-   To capture all used variables by reference, use a capture value of `&`.
+
+Here’s an example of using a default capture by value:
+
+```cpp
+#include <algorithm>
+#include <array>
+#include <iostream>
+
+int main()
+{
+  std::array areas{ 100, 25, 121, 40, 56 };
+
+  int width{};
+  int height{};
+
+  std::cout << "Enter width and height: ";
+  std::cin >> width >> height;
+
+  auto found{ std::find_if(areas.begin(), areas.end(),
+                           [=](int knownArea) { // will default capture width and height by value
+                             return (width * height == knownArea); // because they're mentioned here
+                           }) };
+
+  if (found == areas.end())
+  {
+    std::cout << "I don't know this area :(\n";
+  }
+  else
+  {
+    std::cout << "Area found :)\n";
+  }
+
+  return 0;
+}
+```
+
+Default captures can be mixed with normal captures. We can capture some variables by value and others by reference, but each variable can only be captured once.
+
+```cpp
+int health{ 33 };
+int armor{ 100 };
+std::vector<CEnemy> enemies{};
+
+// Capture health and armor by value, and enemies by reference.
+[health, armor, &enemies](){};
+
+// Capture enemies by reference and everything else by value.
+[=, &enemies](){};
+
+// Capture armor by value and everything else by reference.
+[&, armor](){};
+
+// Illegal, we already said we want to capture everything by reference.
+[&, &armor](){};
+
+// Illegal, we already said we want to capture everything by value.
+[=, armor](){};
+
+// Illegal, armor appears twice.
+[armor, &health, &armor](){};
+
+// Illegal, the default capture has to be the first element in the capture group.
+[armor, &](){};
+```
+
+### Defining new variables in the lambda-capture
+
+Sometimes we want to capture a variable with a slight modification or declare a new variable that is only visible in the scope of the lambda. We can do so by defining a variable in the lambda-capture without specifying its type.
+
+```cpp
+#include <array>
+#include <iostream>
+#include <algorithm>
+
+int main()
+{
+  std::array areas{ 100, 25, 121, 40, 56 };
+
+  int width{};
+  int height{};
+
+  std::cout << "Enter width and height: ";
+  std::cin >> width >> height;
+
+  // We store areas, but the user entered width and height.
+  // We need to calculate the area before we can search for it.
+  auto found{ std::find_if(areas.begin(), areas.end(),
+                           // Declare a new variable that's visible only to the lambda.
+                           // The type of userArea is automatically deduced to int.
+                           [userArea{ width * height }](int knownArea) {
+                             return (userArea == knownArea);
+                           }) };
+
+  if (found == areas.end())
+  {
+    std::cout << "I don't know this area :(\n";
+  }
+  else
+  {
+    std::cout << "Area found :)\n";
+  }
+
+  return 0;
+}
+```
+
+`userArea` will only be calculated once when the lambda is defined. The calculated area is stored in the lambda object and is the same for every call. If a lambda is `mutable` and modifies a variable that was defined in the capture, the original value will be overridden.
+
+### Dangling captured variables
+
+Variables are captured at the point where the lambda is defined. If a variable captured by reference dies before the lambda, the lambda will be left holding a dangling reference.
+
+```cpp
+#include <iostream>
+#include <string>
+
+// returns a lambda
+auto makeWalrus(const std::string& name)
+{
+  // Capture name by reference and return the lambda.
+  return [&]() {
+    std::cout << "I am a walrus, my name is " << name << '\n'; // Undefined behavior
+  };
+}
+
+int main()
+{
+  // Create a new walrus whose name is Roofus.
+  // sayName is the lambda returned by makeWalrus.
+  auto sayName{ makeWalrus("Roofus") };
+
+  // Call the lambda function that makeWalrus returned.
+  sayName();
+
+  return 0;
+}
+```
+
+The call to `makeWalrus` creates a temporary `std::string` from the string literal “Roofus”. The lambda in `makeWalrus` captures the temporary string by reference. The temporary string dies when `makeWalrus` returns, but the lambda still references it. Then when we call sayName, the dangling reference is accessed, causing undefined behavior.
+
+Note that this also happens if `name` is passed to `makeWalrus` by value. The variable `name` still dies at the end of `makeWalrus`, and the lambda is left holding a dangling reference.
+
+### Unintended copies of mutable lambdas
+
+Because lambdas are objects, they can be copied. In some cases, this can cause problems. Consider the following code:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+  int i{ 0 };
+
+  // Create a new lambda named count
+  auto count{ [i]() mutable {
+    std::cout << ++i << '\n';
+  } };
+
+  count(); // invoke count
+
+  auto otherCount{ count }; // create a copy of count
+
+  // invoke both count and the copy
+  count();
+  otherCount();
+
+  return 0;
+}
+```
+
+Output
+
+```
+1
+2
+2
+```
+
+Rather than printing 1, 2, 3, the code prints 2 twice. When we created `otherCount` as a copy of `count`, we created a copy of `count` in its current state. `count`‘s `i` was 1, so `otherCount`‘s `i` is 1 as well. Since `otherCount` is a copy of count, they each have their own `i`.
+
+Now let’s take a look at a slightly less obvious example:
+
+```cpp
+#include <iostream>
+#include <functional>
+
+void myInvoke(const std::function<void()>& fn)
+{
+    fn();
+}
+
+int main()
+{
+    int i{ 0 };
+
+    // Increments and prints its local copy of @i.
+    auto count{ [i]() mutable {
+      std::cout << ++i << '\n';
+    } };
+
+    myInvoke(count);
+    myInvoke(count);
+    myInvoke(count);
+
+    return 0;
+}
+```
+
+Output:
+
+```
+1
+1
+1
+```
+
+This exhibits the same problem as the prior example in a more obscure form. When `std::function` is created with a lambda, the `std::function` internally makes a copy of the lambda object. Thus, our call to `fn()` is actually being executed on the copy of our lambda, not the actual lambda.
+
+If we need to pass a mutable lambda, and want to avoid the possibility of inadvertent copies being made, there are two options. One option is to use a non-capturing lambda instead -- in the above case, we could remove the capture and track our state using a static local variable instead. But static local variables can be difficult to keep track of and make our code less readable. A better option is to prevent copies of our lambda from being made in the first place. But since we can’t affect how `std::function` (or other standard library functions or objects) are implemented, how can we do this?
+
+Fortunately, C++ provides a convenient type (as part of the `<functional>` header) called `std::reference_wrapper` that allows us to pass a normal type as if it was a reference. For even more convenience, a `std::reference_wrapper` can be created by using the `std::ref()` function. By wrapping our lambda in a `std::reference_wrapper`, whenever anybody tries to make a copy of our lambda, they’ll make a copy of the reference_wrapper instead (avoiding making a copy of the lambda).
+
+Here’s our updated code using `std::ref`:
+
+```cpp
+#include <iostream>
+#include <functional>
+
+void myInvoke(const std::function<void()>& fn)
+{
+    fn();
+}
+
+int main()
+{
+    int i{ 0 };
+
+    // Increments and prints its local copy of @i.
+    auto count{ [i]() mutable {
+      std::cout << ++i << '\n';
+    } };
+
+    // std::ref(count) ensures count is treated like a reference
+    // thus, anything that tries to copy count will actually copy the reference
+    // ensuring that only one count exists
+    myInvoke(std::ref(count));
+    myInvoke(std::ref(count));
+    myInvoke(std::ref(count));
+
+    return 0;
+}
+```
+
+Our output is now as expected:
+
+```
+1
+2
+3
+```
+
+**Rule**
+Standard library functions may copy function objects (reminder: lambdas are function objects). If you want to provide lambdas with mutable captured variables, pass them by reference using `std::ref`.
+
+**Best practice**
+Try to avoid mutable lambdas. Non-mutable lambdas are easier to understand and don’t suffer from the above issues, as well as more dangerous issues that arise when you add parallel execution.
